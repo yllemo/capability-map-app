@@ -1,0 +1,4 @@
+@media print{
+  header{ position: static !important; }
+  a[href]:after{ content: "" !important; } /* keep clean */
+}

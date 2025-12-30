@@ -1,0 +1,33 @@
+# Logs
+storage/
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Config overrides (optional)
+config/auth.local.php
+config/app.local.php
+
+# User uploads (optional - remove if you want to track content)
+# content/
+# content2/
+
+# Backup files
+*.bak
+*.backup
+
+# Composer (if used in future)
+vendor/
+composer.lock
