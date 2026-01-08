@@ -44,13 +44,16 @@ function maturityColorClass(int $m): string {
 }
 
 
-function sectionChrome(string $layerKey): array {
+function sectionChrome(string $layerKey, array $tax): array {
+  // Get display name from configuration, fallback to original layer label
+  $displayName = $tax['layer_display_names'][$layerKey] ?? $tax['layers'][$layerKey] ?? ucfirst($layerKey);
+  
   // return [sectionTitle, wrapperClasses]
   return match($layerKey){
-    'ledning_styrning' => ['Styrande & Ledning', 'bg-indigo-50/60 dark:bg-neutral-900/55 border-indigo-100 dark:border-neutral-800'],
-    'karnprocesser'    => ['Kärnverksamhet', 'bg-[rgba(230,240,248,.40)] dark:bg-neutral-900/55 border-blue-100 dark:border-blue-900/40 ring-1 ring-blue-50 dark:ring-neutral-900/30'],
-    'verksamhetsstod'  => ['Stödjande Processer', 'bg-gray-100/90 dark:bg-neutral-900/55 border-gray-200 dark:border-neutral-800'],
-    default            => ['Övrigt', 'bg-gray-100/70 dark:bg-neutral-900/55 border-gray-200 dark:border-neutral-800'],
+    'ledning_styrning' => [$displayName, 'bg-indigo-50/60 dark:bg-neutral-900/55 border-indigo-100 dark:border-neutral-800'],
+    'karnprocesser'    => [$displayName, 'bg-[rgba(230,240,248,.40)] dark:bg-neutral-900/55 border-blue-100 dark:border-blue-900/40 ring-1 ring-blue-50 dark:ring-neutral-900/30'],
+    'verksamhetsstod'  => [$displayName, 'bg-gray-100/90 dark:bg-neutral-900/55 border-gray-200 dark:border-neutral-800'],
+    default            => [$displayName, 'bg-gray-100/70 dark:bg-neutral-900/55 border-gray-200 dark:border-neutral-800'],
   };
 }
 
@@ -212,8 +215,18 @@ function sectionChrome(string $layerKey): array {
 <main id="captureRoot" class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
 
 <?php foreach (($tax['layers'] ?? []) as $layerKey => $layerLabel): 
-  [$title, $chrome] = sectionChrome($layerKey);
+  [$title, $chrome] = sectionChrome($layerKey, $tax);
   $areas = $groups[$layerKey] ?? [];
+  $areaCount = count($areas);
+  
+  // Get layout configuration
+  $layout = $viewCfg['layout'] ?? [];
+  $maxColsSm = min($layout['max_columns_sm'] ?? 2, $areaCount);
+  $maxColsMd = min($layout['max_columns_md'] ?? 3, $areaCount);
+  $maxColsLg = min($layout['max_columns_lg'] ?? 4, $areaCount);
+  
+  // Calculate optimal grid classes based on area count and configuration
+  $gridClasses = "grid-cols-1 sm:grid-cols-{$maxColsSm} md:grid-cols-{$maxColsMd} lg:grid-cols-{$maxColsLg}";
 ?>
 <section>
   <div class="flex items-center gap-2 mb-3">
@@ -228,7 +241,7 @@ function sectionChrome(string $layerKey): array {
     <?php if (!$areas): ?>
       <div class="text-sm text-gray-500 dark:text-neutral-400">Inga förmågor ännu i detta skikt.</div>
     <?php else: ?>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-<?= max(1, min(3, count($areas))) ?> lg:grid-cols-<?= max(1, min(4, count($areas))) ?> gap-4">
+      <div class="grid <?= h($gridClasses) ?> gap-4">
         <?php foreach ($areas as $areaName => $list): ?>
           <div class="domain-group">
             <h3 class="font-bold text-sm mb-3 border-b pb-1

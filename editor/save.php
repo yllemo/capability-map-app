@@ -34,6 +34,7 @@ $type = trim((string)($_POST['type'] ?? ''));
 $owner = trim((string)($_POST['owner'] ?? ''));
 $status = trim((string)($_POST['status'] ?? ''));
 $description = trim((string)($_POST['description'] ?? ''));
+$tags = trim((string)($_POST['tags'] ?? ''));
 $maturity = (int)($_POST['maturity'] ?? 0);
 $criticality = (int)($_POST['criticality'] ?? 0);
 $body = (string)($_POST['body'] ?? '');
@@ -71,6 +72,17 @@ $yaml .= "type: " . $type . "\n";
 $yaml .= "description: " . str_replace("\n", ' ', $description) . "\n";
 $yaml .= "owner: " . str_replace("\n", ' ', $owner) . "\n";
 $yaml .= "status: " . str_replace("\n", ' ', $status) . "\n";
+if ($tags !== '') {
+  // Convert comma-separated string to YAML array format
+  $tagsArray = array_map('trim', explode(',', $tags));
+  $tagsArray = array_filter($tagsArray); // Remove empty values
+  if (!empty($tagsArray)) {
+    $yaml .= "tags:\n";
+    foreach ($tagsArray as $tag) {
+      $yaml .= "  - " . str_replace("\n", ' ', $tag) . "\n";
+    }
+  }
+}
 $yaml .= "maturity: " . $maturity . "\n";
 $yaml .= "criticality: " . $criticality . "\n";
 $yaml .= "updated: " . $updated . "\n";

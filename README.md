@@ -25,8 +25,9 @@ open http://localhost:8080/view/index.php
 
 ### Viewer (`/view/index.php`)
 - 📊 Interaktiv förmågekarta med layers och områden
-- 🔍 Sök och filter på mognadsgrad
-- 🎨 Dark/Light mode med automatisk tema-ihågkommelse
+- 🔍 Sök och filter på mognadsgrad (1-5)
+- 🎨 Heat visualization med färgkodning (maturity/criticality)
+- 🌓 Dark/Light mode med automatisk tema-ihågkommelse
 - 📸 PNG-export av kartan
 - 📤 Excel-export av alla förmågor
 - 📁 Multi-folder support - växla mellan olika innehållskataloger
@@ -101,6 +102,23 @@ php -S localhost:8080
 ### Taxonomi (`/config/taxonomy.php`)
 Definiera layers, types, och levels för din organisation.
 
+### View (`/config/view.php`)
+Styr visualisering och layout:
+```php
+'heat_field' => 'maturity',    // 'maturity' | 'criticality' | 'risk_level'
+'show_empty_lanes' => true,    // Visa tomma sektioner
+'layout' => [
+  'max_columns_sm' => 2,       // Max kolumner på mobil
+  'max_columns_md' => 3,       // Max kolumner på tablet
+  'max_columns_lg' => 4,       // Max kolumner på desktop
+],
+```
+
+**Heat Field**: Bestämmer vilken property som styr kantfärgen på förmågekorten:
+- `'maturity'` - Mognadsnivå (standard) 
+- `'criticality'` - Kritikalitet för verksamheten
+- `'risk_level'` - Custom risk-fält (om du lägger till det)
+
 ## Frontmatter (YAML)
 
 ```yaml
@@ -130,6 +148,45 @@ Markdown-innehåll här med full support för:
 - [Länkar](https://example.com)
 - Auto-linking till andra capabilities (cap-hr-002)
 ```
+
+## 📊 Maturity & Criticality
+
+### Maturity (Mognadsnivå)
+Indikerar hur väl utvecklad och strukturerad en förmåga är:
+
+- **1 (Initial)** - Ad-hoc, ostrukturerat, reaktivt
+- **2 (Repeatable)** - Vissa rutiner finns, inte dokumenterat
+- **3 (Defined)** - Dokumenterade processer, standarder följs
+- **4 (Managed)** - Mäts och följs upp, kvantifierad styrning
+- **5 (Optimizing)** - Kontinuerlig förbättring, innovation
+
+**Visualisering**: 
+- 🟥 Röd kantfärg (nivå 1-2) - Behöver uppmärksamhet
+- 🟨 Gul kantfärg (nivå 3) - Acceptabel
+- 🟩 Grön kantfärg (nivå 4-5) - Bra/Excellent
+
+**Filter**: Klicka på färgade cirklar under sökrutan för att filtrera på mognadsnivå.
+
+### Criticality (Kritikalitet)
+Indikerar hur viktig förmågan är för verksamheten:
+
+- **1** - Låg påverkan på verksamheten
+- **2** - Måttlig påverkan
+- **3** - Viktig för normal drift
+- **4** - Kritisk för verksamheten
+- **5** - Avgörande för överlevnad
+
+**Konfiguration**: Ändra heat-visualisering i `/config/view.php`:
+```php
+'heat_field' => 'criticality',  // Växla från maturity till criticality
+```
+
+**Metadata-visning**: Både maturity och criticality sparas, men:
+- **Maturity** visas som "M3" i små badges under förmågans namn
+- **Criticality** används som alternativ heat-visualisering (kantfärg)
+- Båda är synliga i editorn för redigering
+
+**Tips**: Använd maturity för operativ utveckling och criticality för strategisk prioritering.
 
 ## Multi-folder support
 

@@ -125,6 +125,14 @@ if ($rel === '') {
   $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Status</label><input class="input" name="status" value="'.h($meta['status'] ?? '').'"></div>';
   $editor .= '</div>';
   $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Beskrivning</label><input class="input" name="description" value="'.h($meta['description'] ?? '').'"></div>';
+  // Convert tags array to comma-separated string for editing
+  $tagsValue = '';
+  if (isset($meta['tags']) && is_array($meta['tags'])) {
+    $tagsValue = implode(', ', $meta['tags']);
+  } elseif (isset($meta['tags']) && is_string($meta['tags'])) {
+    $tagsValue = $meta['tags'];
+  }
+  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Taggar <span class="muted">(kommaseparerade)</span></label><input class="input" name="tags" value="'.h($tagsValue).'" placeholder="ex: viktig, extern, digital"></div>';
   $editor .= '<div class="grid grid--2" style="gap:10px">';
   $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Maturity (1-5)</label><input class="input" name="maturity" value="'.h((string)($meta['maturity'] ?? '')).'"></div>';
   $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Criticality (1-5)</label><input class="input" name="criticality" value="'.h((string)($meta['criticality'] ?? '')).'"></div>';
@@ -138,6 +146,7 @@ if ($rel === '') {
 
   $editor .= '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">';
   $editor .= '<button class="btn btn--primary" type="submit">Spara</button>';
+  $editor .= '<button type="button" class="btn btn--secondary" onclick="showRawEditor()">Raw Edit</button>';
   $editor .= '<a class="btn btn--ghost" href="'.h(base_path('view/capability.php?id=' . rawurlencode($meta['id'] ?? ''))).'">Öppna i viewer</a>';
   $editor .= '<a class="btn btn--ghost" href="download.php?file='.rawurlencode($rel).'" download="'.h(basename($rel)).'" title="Ladda ner markdown-filen">';
   $editor .= '<svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
@@ -161,6 +170,29 @@ if ($rel === '') {
   $editor .= '<input type="hidden" name="new_name" id="renameNewName">';
   $editor .= csrf_field();
   $editor .= '</form>';
+
+  // Raw Editor Modal
+  $editor .= '<div id="rawEditorModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;padding:20px">';
+  $editor .= '<div class="card" style="width:90vw;height:85vh;max-width:1200px;display:flex;flex-direction:column">';
+  $editor .= '<div class="card__hd"><strong>Raw Editor</strong><span class="muted">Editera hela markdown-filen inklusive YAML frontmatter</span><button type="button" class="btn btn--ghost" onclick="closeRawEditor()" style="margin-left:auto">✕</button></div>';
+  $editor .= '<div class="card__bd" style="flex:1;display:flex;flex-direction:column">';
+  $editor .= '<form id="rawEditorForm" method="post" action="save_raw.php" style="height:100%;display:flex;flex-direction:column">';
+  $editor .= '<input type="hidden" name="file" value="'.h($rel).'">';
+  $editor .= csrf_field();
+  $editor .= '<div style="flex:1;margin-bottom:10px">';
+  $editor .= '<textarea id="rawContent" name="content" class="textarea" style="height:100%;font-family:monospace;font-size:13px;resize:none">'.h($raw).'</textarea>';
+  $editor .= '</div>';
+  $editor .= '<div style="display:flex;gap:10px;justify-content:space-between;align-items:center">';
+  $editor .= '<div class="muted" style="font-size:12px">Tips: Var försiktig med YAML-syntaxen. Kontrollera indragningar och specialtecken.</div>';
+  $editor .= '<div style="display:flex;gap:10px">';
+  $editor .= '<button type="button" class="btn btn--ghost" onclick="closeRawEditor()">Avbryt</button>';
+  $editor .= '<button type="submit" class="btn btn--primary">Spara Raw</button>';
+  $editor .= '</div>';
+  $editor .= '</div>';
+  $editor .= '</form>';
+  $editor .= '</div>';
+  $editor .= '</div>';
+  $editor .= '</div>';
 
   $editor .= '<script>
     (function(){
@@ -210,6 +242,39 @@ if ($rel === '') {
 
       render();
     })();
+
+    // Raw Editor functions
+    function showRawEditor() {
+      const modal = document.getElementById("rawEditorModal");
+      if (modal) {
+        modal.style.display = "flex";
+        const textarea = document.getElementById("rawContent");
+        if (textarea) {
+          textarea.focus();
+        }
+      }
+    }
+
+    function closeRawEditor() {
+      const modal = document.getElementById("rawEditorModal");
+      if (modal) {
+        modal.style.display = "none";
+      }
+    }
+
+    // Close modal when clicking outside
+    document.getElementById("rawEditorModal")?.addEventListener("click", function(e) {
+      if (e.target === this) {
+        closeRawEditor();
+      }
+    });
+
+    // Escape key to close
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") {
+        closeRawEditor();
+      }
+    });
   </script>';
 }
 $editor .= '</div></div>';

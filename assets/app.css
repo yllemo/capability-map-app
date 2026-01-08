@@ -105,6 +105,16 @@ code{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mon
   border-color: var(--primary-hover);
   color: #ffffff;
 }
+.btn--secondary{
+  background: color-mix(in srgb, var(--primary) 12%, var(--panel));
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  color: var(--primary);
+}
+.btn--secondary:hover{
+  background: color-mix(in srgb, var(--primary) 18%, var(--panel));
+  border-color: var(--primary);
+  color: var(--primary-hover);
+}
 .btn--danger{
   background: color-mix(in srgb, var(--danger) 14%, var(--panel));
   border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
