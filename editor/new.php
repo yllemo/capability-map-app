@@ -3,6 +3,9 @@ require __DIR__ . '/_auth.php';
 require_auth();
 header('Content-Type: text/html; charset=UTF-8');
 
+use App\CapabilityRepository;
+use App\Logger;
+
 $app = cfg('app');
 $tax = cfg('taxonomy');
 
@@ -33,7 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $error = 'Fyll i layer, id och name';
     } else {
       // Check for duplicate ID
-      use App\CapabilityRepository;
       $repo = new CapabilityRepository($contentDir);
       $existing = $repo->byId($id);
       if ($existing) {
@@ -67,7 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           file_put_contents($abs, $tpl, LOCK_EX);
 
           // Log the creation
-          use App\Logger;
           Logger::audit('capability_created', ['file' => $file, 'id' => $id]);
 
           header('Location: index.php?file=' . rawurlencode($file));
