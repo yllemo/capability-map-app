@@ -33,11 +33,26 @@
       return;
     }
 
+    // Handle export dropdown toggle
+    const exportBtn = e.target.closest('#btnExportDropdown');
+    if(exportBtn){
+      const dropdown = document.getElementById('exportDropdown');
+      if(dropdown) dropdown.classList.toggle('hidden');
+      return;
+    }
+
     // close filter panel when clicking outside
     const panel = document.getElementById('filterPanel');
     if(panel && !panel.classList.contains('hidden')){
       const within = e.target.closest('#filterPanel') || e.target.closest('[data-filter-toggle]');
       if(!within) panel.classList.add('hidden');
+    }
+
+    // close export dropdown when clicking outside
+    const exportDropdown = document.getElementById('exportDropdown');
+    if(exportDropdown && !exportDropdown.classList.contains('hidden')){
+      const within = e.target.closest('#exportDropdown') || e.target.closest('#btnExportDropdown');
+      if(!within) exportDropdown.classList.add('hidden');
     }
   });
 

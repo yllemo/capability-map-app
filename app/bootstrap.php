@@ -7,10 +7,19 @@ ini_set('default_charset', 'UTF-8');
 
 // Secure session configuration
 if (session_status() === PHP_SESSION_NONE) {
-  ini_set('session.cookie_httponly', '1');
-  ini_set('session.cookie_samesite', 'Strict');
-  if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
-    ini_set('session.cookie_secure', '1');
+  // OpenShift compatibility: Less strict cookie settings for container environments
+  if (getenv('OPENSHIFT_BUILD_NAMESPACE') || getenv('KUBERNETES_SERVICE_HOST')) {
+    // In OpenShift/Kubernetes, use less strict settings
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax'); // Less strict for containerized environments
+    // Don't force secure cookies in container environments where SSL termination happens at proxy
+  } else {
+    // Standard settings for other environments
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Strict');
+    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+      ini_set('session.cookie_secure', '1');
+    }
   }
   ini_set('session.use_strict_mode', '1');
   session_start();

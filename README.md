@@ -29,9 +29,11 @@ open http://localhost:8080/view/index.php
 - 🎨 Heat visualization med färgkodning (maturity/criticality)
 - 🌓 Dark/Light mode med automatisk tema-ihågkommelse
 - 📸 PNG-export av kartan
-- 📤 Excel-export av alla förmågor
+- 📤 Excel-export med valmöjlighet: aktuell katalog eller alla kataloger
 - 📁 Multi-folder support - växla mellan olika innehållskataloger
 - 🔗 Auto-linking av capability-referenser (cap-xxx) i markdown
+- 📱 Mobiloptimerad med icke-sticky headers på mobila enheter
+- 🎨 Konfigurerbar UI via config-filer (texter och logo)
 
 ### Editor (`/editor/index.php`)
 - ✏️ Markdown-editor med live preview
@@ -52,6 +54,7 @@ open http://localhost:8080/view/index.php
 - 📝 Audit logging av alla ändringar
 - ⚠️ Varning vid användning av standardlösenord
 - 🚫 Path traversal-skydd med PathGuard
+- 🐳 OpenShift/Kubernetes-kompatibilitet med automatisk miljödetektering
 
 ## Kom igång (lokalt)
 
@@ -111,6 +114,25 @@ Styr visualisering och layout:
   'max_columns_sm' => 2,       // Max kolumner på mobil
   'max_columns_md' => 3,       // Max kolumner på tablet
   'max_columns_lg' => 4,       // Max kolumner på desktop
+],
+```
+
+### UI Konfiguration (`/config/ui.php`)
+Anpassa texter och logo för applikationen:
+```php
+'title' => 'Förmågekarta',                    // Huvudtitel
+'subtitle' => 'Vy: Strategisk mognad',        // Undertitel  
+'heat_label' => 'heat',                       // Heat-etikett
+'search_placeholder' => 'Sök förmåga...',     // Sökfält placeholder
+'filter_button_text' => 'Filter',             // Filterknappstext
+'export_excel_text' => 'Exportera till Excel', // Excel-knappstext
+
+// Custom SVG-logo
+'logo' => [
+  'svg_file' => 'min-logo.svg',  // Lägg SVG i /config/
+  'fallback_text' => 'EA',       // Text om ingen SVG
+  'svg_width' => '40',
+  'svg_height' => '40'
 ],
 ```
 
@@ -188,6 +210,31 @@ Indikerar hur viktig förmågan är för verksamheten:
 
 **Tips**: Använd maturity för operativ utveckling och criticality för strategisk prioritering.
 
+## 🆕 Senaste uppdateringar
+
+### Excel Export
+- **Valmöjlighet**: Exportera endast aktuell katalog eller alla kataloger
+- **Dropdown-meny**: Enkelt val mellan export-alternativ
+- **Katalog-kolumn**: När alla kataloger exporteras visas vilken katalog varje förmåga kommer ifrån
+- **Intelligent namngivning**: Filnamnet reflekterar vad som exporterats
+
+### Mobilanpassningar
+- **Icke-sticky headers**: Headers scrollar med innehållet på mobila enheter för mer skärmyta
+- **Responsiv dropdown**: Export-dropdown öppnas uppåt på små skärmar
+- **Touch-optimerad**: Förbättrad användarupplevelse på touchskärmar
+
+### UI Konfiguration
+- **Anpassningsbara texter**: Ändra alla synliga texter via `/config/ui.php`
+- **Custom logo**: Använd egen SVG-logo istället för "EA"-texten
+- **Klickbar header**: Logo och titel är klickbara för att komma tillbaka till startsidan
+- **Fallback-hantering**: Smidig övergång mellan SVG-logo och textfallback
+
+### OpenShift/Kubernetes Support
+- **Automatisk miljödetektering**: Detekterar container-miljöer automatiskt
+- **Session-kompatibilitet**: Anpassade cookie-inställningar för containeriserade miljöer
+- **Temp-directory fallbacks**: Intelligent hantering av skrivbara temp-kataloger
+- **Debug-endpoints**: `/view/debug_session.php` och `/view/reset_session.php` för felsökning
+
 ## Multi-folder support
 
 Växla mellan olika innehållskataloger (t.ex. produktion, test, arkiv):
@@ -225,8 +272,15 @@ Växla mellan olika innehållskataloger (t.ex. produktion, test, arkiv):
   /lib/                # Klasser (Repository, Markdown, etc.)
   /templates/          # Layout-templates
 /config/               # Konfigurationsfiler
+  ui.php               # UI-texter och logo-konfiguration
+  auth.php             # Autentisering
+  app.php              # Allmänna inställningar
+  taxonomy.php         # Kategorier och taxonomi
+  view.php             # Visualisering och layout
 /storage/              # Logs och temp-filer
 /assets/               # CSS, JS, ikoner
+OPENSHIFT_TROUBLESHOOTING.md    # OpenShift-felsökning
+UI_KONFIGURATION.md            # UI-konfigurationsguide
 ```
 
 ## Säkerhet & Best Practices

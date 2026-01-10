@@ -55,7 +55,7 @@ $meta = $cap->meta;
 </head>
 <body class="bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-neutral-100 min-h-screen">
 
-<header class="bg-white dark:bg-neutral-950/80 border-b border-gray-200 dark:border-neutral-800 sticky top-0 z-50 shadow-sm backdrop-blur">
+<header class="bg-white dark:bg-neutral-950/80 border-b border-gray-200 dark:border-neutral-800 md:sticky md:top-0 z-50 shadow-sm backdrop-blur">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">

@@ -7,6 +7,7 @@ use App\CapabilityRepository;
 $app = cfg('app');
 $tax = cfg('taxonomy');
 $viewCfg = cfg('view');
+$uiCfg = cfg('ui');
 
 // Get available content directories and selected one
 $contentDirs = get_content_dirs();
@@ -31,6 +32,36 @@ foreach ($groups as $layer => $areas) {
 }
 
 $heatField = $viewCfg['heat_field'] ?? 'maturity';
+
+/**
+ * Get logo HTML based on UI configuration
+ */
+function getLogoHtml(array $uiCfg): string {
+  $logoConfig = $uiCfg['logo'] ?? [];
+  $svgFile = $logoConfig['svg_file'] ?? null;
+  
+  if ($svgFile) {
+    $svgPath = __DIR__ . '/../config/' . $svgFile;
+    if (file_exists($svgPath)) {
+      $svgContent = file_get_contents($svgPath);
+      // Add width and height attributes if they don't exist
+      $width = $logoConfig['svg_width'] ?? '40';
+      $height = $logoConfig['svg_height'] ?? '40';
+      
+      if (strpos($svgContent, 'width=') === false) {
+        $svgContent = str_replace('<svg', '<svg width="' . $width . '" height="' . $height . '"', $svgContent);
+      }
+      
+      return '<div class="flex items-center justify-center">' . $svgContent . '</div>';
+    }
+  }
+  
+  // Fallback to text logo
+  $containerClasses = $logoConfig['container_classes'] ?? 'bg-inera-blue w-10 h-10 rounded flex items-center justify-center text-white font-bold shadow-sm';
+  $fallbackText = $logoConfig['fallback_text'] ?? 'EA';
+  
+  return '<div class="' . $containerClasses . '">' . h($fallbackText) . '</div>';
+}
 
 function maturityColorClass(int $m): string {
   // Strong in light mode, slightly lighter (higher contrast) in dark mode
@@ -62,9 +93,9 @@ function sectionChrome(string $layerKey, array $tax): array {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Förmågekarta</title>
-  <link rel="icon" href="<?= h(base_path('assets/favicon.svg')) ?>" type="image/svg+xml">
-  <link rel="icon" href="<?= h(base_path('assets/favicon.png')) ?>" type="image/png">
+  <title><?= h($uiCfg['page_title'] ?? 'Förmågekarta') ?></title>
+  <link rel="icon" href="<?= h(base_path($uiCfg['favicon']['svg'] ?? 'assets/favicon.svg')) ?>" type="image/svg+xml">
+  <link rel="icon" href="<?= h(base_path($uiCfg['favicon']['png'] ?? 'assets/favicon.png')) ?>" type="image/png">
 
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -88,18 +119,20 @@ function sectionChrome(string $layerKey, array $tax): array {
 
 <body class="bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-neutral-100 font-sans min-h-screen flex flex-col">
 
-<header class="bg-white dark:bg-neutral-950/80 border-b border-gray-200 dark:border-neutral-800 sticky top-0 z-50 shadow-sm backdrop-blur">
+<header class="bg-white dark:bg-neutral-950/80 border-b border-gray-200 dark:border-neutral-800 md:sticky md:top-0 z-50 shadow-sm backdrop-blur">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
     <div class="flex flex-col md:flex-row justify-between items-center gap-4">
 
       <div class="flex items-center gap-3">
-        <div class="bg-inera-blue w-10 h-10 rounded flex items-center justify-center text-white font-bold shadow-sm">EA</div>
-        <div>
-          <h1 class="text-xl font-bold text-gray-900 dark:text-neutral-50 leading-tight">Förmågekarta</h1>
-          <p class="text-xs text-gray-500 dark:text-neutral-400 uppercase tracking-wider">
-            Vy: Strategisk mognad • heat: <?= h($heatField) ?>
-          </p>
-        </div>
+        <a href="<?= h(base_path('view/index.php')) ?>" class="flex items-center gap-3 no-underline hover:no-underline text-inherit">
+          <?= getLogoHtml($uiCfg) ?>
+          <div>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-neutral-50 leading-tight hover:text-gray-700 dark:hover:text-neutral-200 transition-colors"><?= h($uiCfg['title'] ?? 'Förmågekarta') ?></h1>
+            <p class="text-xs text-gray-500 dark:text-neutral-400 uppercase tracking-wider">
+              <?= h($uiCfg['subtitle'] ?? 'Vy: Strategisk mognad') ?> • <?= h($uiCfg['heat_label'] ?? 'heat') ?>: <?= h($heatField) ?>
+            </p>
+          </div>
+        </a>
       </div>
 
       <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
@@ -109,7 +142,7 @@ function sectionChrome(string $layerKey, array $tax): array {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
           </div>
-          <input type="text" id="searchInput" placeholder="Sök förmåga..."
+          <input type="text" id="searchInput" placeholder="<?= h($uiCfg['search_placeholder'] ?? 'Sök förmåga...') ?>"
             class="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-neutral-700 rounded-md leading-5 bg-gray-50 dark:bg-neutral-900 text-sm placeholder-gray-500 dark:placeholder-slate-500 focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-inera-blue focus:ring-1 focus:ring-inera-blue transition duration-150 ease-in-out">
         </div>
 
@@ -132,7 +165,7 @@ function sectionChrome(string $layerKey, array $tax): array {
               <svg class="h-4 w-4 text-gray-500 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-.553.894l-4 2A1 1 0 019 21v-8.586L3.293 6.707A1 1 0 013 6V4z"/>
               </svg>
-              Filter
+              <?= h($uiCfg['filter_button_text'] ?? 'Filter') ?>
             </button>
 
             <a href="<?= h(base_path('view/help.php')) ?>"
@@ -327,20 +360,39 @@ function sectionChrome(string $layerKey, array $tax): array {
         Spara som PNG
       </button>
 
-      <a href="<?= h(base_path('view/export_excel.php')) ?>" id="btnExcel"
-        class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition">
-        <svg class="h-4 w-4 text-gray-500 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4V4zm4 4h8M8 8v8m4-8v8"/>
-        </svg>
-        Exportera till Excel
-      </a>
+      <div class="relative">
+        <button id="btnExportDropdown" 
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition">
+          <svg class="h-4 w-4 text-gray-500 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4V4zm4 4h8M8 8v8m4-8v8"/>
+          </svg>
+          <?= h($uiCfg['export_excel_text'] ?? 'Exportera till Excel') ?>
+          <svg class="h-3 w-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+          </svg>
+        </button>
+        <div id="exportDropdown" class="absolute right-0 bottom-full mb-2 w-56 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-md shadow-lg z-50 hidden">
+          <div class="py-1">
+            <a href="<?= h(base_path('view/export_excel.php?scope=current')) ?>" 
+               class="block px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-700">
+              <div class="font-medium"><?= h($uiCfg['export_options']['current']['title'] ?? 'Aktuell katalog') ?></div>
+              <div class="text-xs text-gray-500 dark:text-neutral-400"><?= h($uiCfg['export_options']['current']['description'] ?? 'Endast denna vy') ?></div>
+            </a>
+            <a href="<?= h(base_path('view/export_excel.php?scope=all')) ?>" 
+               class="block px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-700">
+              <div class="font-medium"><?= h($uiCfg['export_options']['all']['title'] ?? 'Alla kataloger') ?></div>
+              <div class="text-xs text-gray-500 dark:text-neutral-400"><?= h($uiCfg['export_options']['all']['description'] ?? 'Alla tillgängliga data') ?></div>
+            </a>
+          </div>
+        </div>
+      </div>
 
       <button id="btnPrint" type="button"
         class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition">
         <svg class="h-4 w-4 text-gray-500 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/>
         </svg>
-        Print
+        <?= h($uiCfg['print_button_text'] ?? 'Print') ?>
       </button>
 
       <a href="<?= h(base_path('editor/index.php')) ?>"

@@ -47,6 +47,12 @@ code{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mon
 @media (max-width:720px){
   .container{padding:14px}
   .container--wide{padding:14px}
+  
+  /* Remove sticky headers on mobile */
+  .topbar{
+    position: static;
+    top: auto;
+  }
 }
 
 .topbar{
@@ -168,6 +174,15 @@ code{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mon
   .grid--editor{grid-template-columns:1fr}
   .grid--editor > :first-child{
     position:static;
+    max-height:none;
+  }
+}
+
+/* Additional mobile adjustments for sticky elements */
+@media (max-width:720px){
+  .grid--editor > :first-child{
+    position:static;
+    top: auto;
     max-height:none;
   }
 }

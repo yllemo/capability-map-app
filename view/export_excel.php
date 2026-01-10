@@ -6,12 +6,38 @@ use App\CapabilityRepository;
 $app = cfg('app');
 $tax = cfg('taxonomy');
 
-$repo = new CapabilityRepository($app['content_dir']);
-$caps = $repo->all();
+// Check export scope: 'current' (default) or 'all'
+$scope = $_GET['scope'] ?? 'current';
+
+// Get selected content directory
+$selectedKey = get_selected_content_key();
+$selectedDir = get_content_dir();
+$contentDirs = get_content_dirs();
+
+if ($scope === 'all') {
+    // Export from all content directories
+    $caps = [];
+    foreach ($contentDirs as $key => $dirInfo) {
+        $repo = new CapabilityRepository($dirInfo['path']);
+        $dirCaps = $repo->all();
+        // Add directory info to each capability for reference
+        foreach ($dirCaps as $cap) {
+            $cap->_source_dir = $dirInfo['label'] ?? $key;
+        }
+        $caps = array_merge($caps, $dirCaps);
+    }
+    $dirLabel = 'alla_kataloger';
+} else {
+    // Export only from current directory
+    $repo = new CapabilityRepository($selectedDir);
+    $caps = $repo->all();
+    $dirLabel = $contentDirs[$selectedKey]['label'] ?? $selectedKey;
+}
 
 usort($caps, fn($a,$b) => strcmp($a->id, $b->id));
 
-$filename = 'formagekarta_' . date('Y-m-d') . '.xls';
+// Include scope info in filename
+$filename = 'formagekarta_' . $dirLabel . '_' . date('Y-m-d') . '.xls';
 
 // Excel can open HTML tables when served as xls
 header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
@@ -42,6 +68,9 @@ function cell($v){
       <th>Tags</th>
       <th>Updated</th>
       <th>Source</th>
+      <?php if ($scope === 'all'): ?>
+      <th>Katalog</th>
+      <?php endif; ?>
     </tr>
   </thead>
   <tbody>
@@ -58,6 +87,9 @@ function cell($v){
       <td><?= cell($c->get('tags','')) ?></td>
       <td><?= cell($c->get('updated','')) ?></td>
       <td><?= cell($c->path ?? '') ?></td>
+      <?php if ($scope === 'all'): ?>
+      <td><?= cell($c->_source_dir ?? '') ?></td>
+      <?php endif; ?>
     </tr>
   <?php endforeach; ?>
   </tbody>
