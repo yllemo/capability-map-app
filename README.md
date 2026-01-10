@@ -2,6 +2,8 @@
 
 En fullständig Enterprise Architecture capability map-applikation byggd med PHP och Markdown.
 
+![Capability Map App Overview](capability-map-app-overview.png)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-blue.svg)](https://php.net)
 
@@ -356,6 +358,20 @@ server {
 - Sätt korrekta filrättigheter: `chmod -R 755 ./ && chmod -R 700 storage/`
 - Använd HTTPS i produktion
 - Säkerhetskopiera `content/` regelbundet
+
+## 📖 Bakgrund och filosofi
+
+Problemet med förmågekartor är sällan att skapa dem - det är att hålla dem vid liv. De flesta förmågekartor tas fram i workshops, dokumenteras i PowerPoint och glöms bort inom sex månader.
+
+Capability Map App bygger på en annan filosofi: **innehåll före verktyg**. Genom att använda Markdown-filer istället för databaser blir förmågor:
+- **Läsbara** utan verktyg
+- **Versionshanterade** med Git
+- **AI-kompatibla** för analys och automation
+- **Långsiktiga** och flyttbara mellan system
+
+När förmågor behandlas som text blir uppdatering enkel, förändring spårbar och utveckling möjlig.
+
+**📝 Läs mer**: [Förmågekartor som lever - Varför Markdown och Git är framtiden för Enterprise Architecture](https://blog.yllemo.com/?p=1912)
 
 ## Licens
 
