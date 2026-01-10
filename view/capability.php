@@ -7,6 +7,7 @@ use App\Markdown;
 
 $app = cfg('app');
 $tax = cfg('taxonomy');
+$uiCfg = cfg('ui');
 
 $id = trim($_GET['id'] ?? '');
 if ($id === '') { http_response_code(400); echo 'Missing id'; exit; }
@@ -21,6 +22,36 @@ if (!$data) { http_response_code(404); echo 'Not found'; exit; }
 $cap = $data['cap'];
 $body = (string)($data['body'] ?? '');
 $bodyHtml = Markdown::toHtml($body);
+
+/**
+ * Get logo HTML based on UI configuration
+ */
+function getLogoHtml(array $uiCfg): string {
+  $logoConfig = $uiCfg['logo'] ?? [];
+  $svgFile = $logoConfig['svg_file'] ?? null;
+  
+  if ($svgFile) {
+    $svgPath = __DIR__ . '/../config/' . $svgFile;
+    if (file_exists($svgPath)) {
+      $svgContent = file_get_contents($svgPath);
+      // Add width and height attributes if they don't exist
+      $width = $logoConfig['svg_width'] ?? '40';
+      $height = $logoConfig['svg_height'] ?? '40';
+      
+      if (strpos($svgContent, 'width=') === false) {
+        $svgContent = str_replace('<svg', '<svg width="' . $width . '" height="' . $height . '"', $svgContent);
+      }
+      
+      return '<div class="flex items-center justify-center">' . $svgContent . '</div>';
+    }
+  }
+  
+  // Fallback to text logo
+  $containerClasses = $logoConfig['container_classes'] ?? 'bg-inera-blue w-10 h-10 rounded flex items-center justify-center text-white font-bold shadow-sm';
+  $fallbackText = $logoConfig['fallback_text'] ?? 'EA';
+  
+  return '<div class="' . $containerClasses . '">' . h($fallbackText) . '</div>';
+}
 
 // Calculate relative path from content_dir for editor link
 $relPath = '';
@@ -42,9 +73,9 @@ $meta = $cap->meta;
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= h($cap->name) ?> – Förmåga</title>
-  <link rel="icon" href="<?= h(base_path('assets/favicon.svg')) ?>" type="image/svg+xml">
-  <link rel="icon" href="<?= h(base_path('assets/favicon.png')) ?>" type="image/png">
+  <title><?= h($cap->name) ?> – <?= h($uiCfg['title'] ?? 'Förmågekarta') ?></title>
+  <link rel="icon" href="<?= h(base_path($uiCfg['favicon']['svg'] ?? 'assets/favicon.svg')) ?>" type="image/svg+xml">
+  <link rel="icon" href="<?= h(base_path($uiCfg['favicon']['png'] ?? 'assets/favicon.png')) ?>" type="image/png">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -59,11 +90,13 @@ $meta = $cap->meta;
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="bg-inera-blue w-10 h-10 rounded flex items-center justify-center text-white font-bold shadow-sm">EA</div>
-        <div>
-          <div class="text-xs text-gray-500 dark:text-neutral-400 uppercase tracking-wider"><?= h($tax['layers'][$cap->layer] ?? $cap->layer) ?> • <?= h($cap->area) ?></div>
-          <h1 class="text-xl font-bold text-gray-900 dark:text-neutral-50 leading-tight"><?= h($cap->name) ?></h1>
-        </div>
+        <a href="<?= h(base_path('view/index.php')) ?>" class="flex items-center gap-3 no-underline hover:no-underline text-inherit">
+          <?= getLogoHtml($uiCfg) ?>
+          <div>
+            <div class="text-xs text-gray-500 dark:text-neutral-400 uppercase tracking-wider"><?= h($tax['layers'][$cap->layer] ?? $cap->layer) ?> • <?= h($cap->area) ?></div>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-neutral-50 leading-tight hover:text-gray-700 dark:hover:text-neutral-200 transition-colors"><?= h($cap->name) ?></h1>
+          </div>
+        </a>
       </div>
       <div class="flex items-center gap-2">
         <a class="px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"

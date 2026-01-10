@@ -1,4 +1,4 @@
-# Capability Map App (PHP + Markdown)
+# Capability Map App
 
 En fullständig Enterprise Architecture capability map-applikation byggd med PHP och Markdown.
 
