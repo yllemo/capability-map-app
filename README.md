@@ -21,7 +21,7 @@ php -S localhost:8080
 open http://localhost:8080/view/index.php
 ```
 
-**⚠️ VIKTIGT**: Ändra lösenord i `config/auth.php` innan du kör i produktion!
+**⚠️ VIKTIGT**: Konfigurera säkra lösenord och API-nycklar innan produktion - se [Säkerhet](#säkerhet)!
 
 ## Funktioner
 
@@ -69,23 +69,34 @@ php -S localhost:8080
 - **Editor**: http://localhost:8080/editor/index.php
 
 ### Första gången
-1. **VIKTIGT**: Ändra lösenord i `/config/auth.php` 
-   ```php
-   'editor_password' => 'ÄNDRA-TILL-SÄKERT-LÖSENORD-HÄR',
+1. **VIKTIGT**: Kopiera och konfigurera miljöfiler:
+   ```bash
+   cp .env.example .env
+   cp config/auth.example.php config/auth.php
    ```
-2. Logga in på editorn: http://localhost:8080/editor/index.php
-3. Börja skapa eller redigera capabilities
+2. **Redigera `.env`** och sätt säkra värden:
+   ```
+   EDITOR_PASSWORD=ditt-säkra-lösenord-här-minst-32-tecken
+   OPENAI_API_KEY=din-openai-api-nyckel
+   ```
+3. Logga in på editorn: http://localhost:8080/editor/index.php
+4. Börja skapa eller redigera capabilities
 
 > 🔐 **Säkerhetstips**: Använd minst 32 tecken långt slumpmässigt lösenord för produktion!
 
 ## Konfiguration
 
 ### Auth (`/config/auth.php`)
+**OBS**: Detta är en känslig fil som inte bör checkas in till Git. 
+Använd miljövariabler för säker konfiguration:
+
 ```php
-'editor_password' => 'ditt-säkra-lösenord-här',  // Ändra detta!
+'editor_password' => getenv('EDITOR_PASSWORD') ?: 'fallback-lösenord',
 'cookie_name' => 'capmap_editor',
 'cookie_ttl' => 60 * 60 * 8,  // 8 timmar
 ```
+
+Se [.env.example](.env.example) för miljövariabel-mall.
 
 ### App (`/config/app.php`)
 ```php
@@ -288,11 +299,13 @@ UI_KONFIGURATION.md            # UI-konfigurationsguide
 ## Säkerhet & Best Practices
 
 - ✅ Använd HTTPS i produktion
-- ✅ Ändra standardlösenord omedelbart
+- ✅ Konfigurera `.env` med säkra värden (kopiera från `.env.example`)
+- ✅ Skapa `config/auth.php` från `auth.example.php` med säkert lösenord
+- ✅ **Checka ALDRIG in** `.env`, `config/auth.php` eller andra känsliga filer
 - ✅ Säkerhetskopiera `/content` regelbundet
 - ✅ Granska `/storage/error.log` för fel
 - ✅ Begränsa åtkomst till `/editor` med .htaccess eller brandvägg
-- ✅ Använd starka lösenord (minst 32 tecken)
+- ✅ Använd starka lösenord och API-nycklar (minst 32 tecken)
 
 ## Loggar
 
@@ -354,10 +367,13 @@ server {
 ```
 
 ### Säkerhet
-- Ändra lösenord i `config/auth.php` innan deployment
-- Sätt korrekta filrättigheter: `chmod -R 755 ./ && chmod -R 700 storage/`
-- Använd HTTPS i produktion
-- Säkerhetskopiera `content/` regelbundet
+- ✅ Kopiera `.env.example` till `.env` och konfigurera säkra värden  
+- ✅ Kopiera `config/auth.example.php` till `config/auth.php`
+- ✅ Använd starka lösenord (minst 32 tecken) i `EDITOR_PASSWORD`
+- ✅ Sätt korrekta filrättigheter: `chmod -R 755 ./ && chmod -R 700 storage/`
+- ✅ Använd HTTPS i produktion
+- ✅ Säkerhetskopiera `content/` regelbundet
+- ⚠️ **Viktigt**: Checka ALDRIG in `config/auth.php` eller `.env` till Git!
 
 ## 📖 Bakgrund och filosofi
 

@@ -16,9 +16,19 @@ temp/
 .DS_Store
 Thumbs.db
 
-# Config overrides (optional)
+# Environment files
+config/.env
+config/.env.*
+!config/.env.example
+.env
+.env.*
+!.env.example
+
+# Config overrides and sensitive files
 config/auth.local.php
 config/app.local.php
+config/auth.php
+config/ai.local.php
 
 # User uploads (optional - remove if you want to track content)
 # content/
