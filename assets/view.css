@@ -4,6 +4,39 @@
   will-change: transform, opacity, filter;
   box-shadow: 0 1px 3px rgba(0,0,0,.1);
 }
+
+/* Maturity background tint */
+.capability-card.cap-maturity-0{ background: rgba(255,255,255,.95); }
+.capability-card.cap-maturity-1{ background: rgba(254,226,226,.9); }
+.capability-card.cap-maturity-2{ background: rgba(255,237,213,.9); }
+.capability-card.cap-maturity-3{ background: rgba(254,249,195,.9); }
+.capability-card.cap-maturity-4{ background: rgba(236,252,203,.9); }
+.capability-card.cap-maturity-5{ background: rgba(220,252,231,.9); }
+
+.dark .capability-card.cap-maturity-0{ background: rgba(23,23,23,.8); }
+.dark .capability-card.cap-maturity-1{ background: rgba(127,29,29,.28); }
+.dark .capability-card.cap-maturity-2{ background: rgba(124,45,18,.28); }
+.dark .capability-card.cap-maturity-3{ background: rgba(113,63,18,.28); }
+.dark .capability-card.cap-maturity-4{ background: rgba(54,83,20,.28); }
+.dark .capability-card.cap-maturity-5{ background: rgba(20,83,45,.28); }
+
+/* Optional: disable maturity backgrounds */
+.hide-card-bg .capability-card.cap-maturity-0,
+.hide-card-bg .capability-card.cap-maturity-1,
+.hide-card-bg .capability-card.cap-maturity-2,
+.hide-card-bg .capability-card.cap-maturity-3,
+.hide-card-bg .capability-card.cap-maturity-4,
+.hide-card-bg .capability-card.cap-maturity-5{
+  background: rgba(255,255,255,.95) !important;
+}
+.dark.hide-card-bg .capability-card.cap-maturity-0,
+.dark.hide-card-bg .capability-card.cap-maturity-1,
+.dark.hide-card-bg .capability-card.cap-maturity-2,
+.dark.hide-card-bg .capability-card.cap-maturity-3,
+.dark.hide-card-bg .capability-card.cap-maturity-4,
+.dark.hide-card-bg .capability-card.cap-maturity-5{
+  background: rgba(23,23,23,.8) !important;
+}
 .capability-card:not(.is-dimmed):hover{
   transform: translateY(-3px);
   box-shadow: 0 8px 16px rgba(0,0,0,.15);

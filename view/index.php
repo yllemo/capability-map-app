@@ -185,22 +185,22 @@ function sectionChrome(string $layerKey, array $tax): array {
             <div class="text-xs font-semibold text-gray-500 dark:text-neutral-400 uppercase tracking-wider mb-2">Mognadsfilter</div>
 
             <div class="flex flex-wrap sm:flex-nowrap gap-2">
-              <button type="button" onclick="setFilter('all')" id="btn-all" class="filter-btn active px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent">
+              <button type="button" onclick="setAllMaturityFilters()" id="btn-all" class="filter-btn active px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent">
                 Alla
               </button>
-              <button type="button" onclick="setFilter('1')" id="btn-1" class="filter-btn px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent flex items-center gap-1.5">
+              <button type="button" onclick="toggleMaturityFilter('1')" id="btn-1" class="filter-btn px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-red-500"></span> 1
               </button>
-              <button type="button" onclick="setFilter('2')" id="btn-2" class="filter-btn px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent flex items-center gap-1.5">
+              <button type="button" onclick="toggleMaturityFilter('2')" id="btn-2" class="filter-btn px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-orange-500"></span> 2
               </button>
-              <button type="button" onclick="setFilter('3')" id="btn-3" class="filter-btn px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent flex items-center gap-1.5">
+              <button type="button" onclick="toggleMaturityFilter('3')" id="btn-3" class="filter-btn px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-yellow-400"></span> 3
               </button>
-              <button type="button" onclick="setFilter('4')" id="btn-4" class="filter-btn px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent flex items-center gap-1.5">
+              <button type="button" onclick="toggleMaturityFilter('4')" id="btn-4" class="filter-btn px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-lime-500"></span> 4
               </button>
-              <button type="button" onclick="setFilter('5')" id="btn-5" class="filter-btn px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent flex items-center gap-1.5">
+              <button type="button" onclick="toggleMaturityFilter('5')" id="btn-5" class="filter-btn px-3 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-900 transition border border-transparent flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-green-500"></span> 5
               </button>
             </div>
@@ -225,6 +225,11 @@ function sectionChrome(string $layerKey, array $tax): array {
     <input id="toggleTags" type="checkbox" class="h-4 w-4 rounded border-gray-300 dark:border-neutral-700" checked>
     Visa taggar
   </label>
+
+  <label class="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-neutral-300 select-none">
+    <input id="toggleBg" type="checkbox" class="h-4 w-4 rounded border-gray-300 dark:border-neutral-700" checked>
+    Visa bakgrundsfärg på kort
+  </label>
 </div>
 <div class="mt-3 text-xs text-gray-500 dark:text-neutral-400">
               Tips: Sök + filter dimmar övriga kort.
@@ -233,7 +238,7 @@ function sectionChrome(string $layerKey, array $tax): array {
             <div class="mt-3 flex items-center justify-between">
               <a href="<?= h(base_path('editor/index.php')) ?>" class="text-xs font-semibold text-inera-blue hover:underline">Gå till Editor</a>
               <button type="button" class="text-xs px-2 py-1 rounded-md border border-gray-200 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-900"
-                      onclick="document.getElementById('searchInput').value=''; searchQuery=''; setFilter('all'); updateUI();">
+                      onclick="clearAllFilters()">
                 Rensa
               </button>
             </div>
@@ -289,7 +294,7 @@ function sectionChrome(string $layerKey, array $tax): array {
                 $border = maturityColorClass($m ?: 1);
               ?>
 <a href="<?= h(base_path('view/capability.php?id=' . rawurlencode($cap->id))) ?>"
-   class="capability-card cap-card block bg-white/95 dark:bg-neutral-900/80 p-2.5 rounded-md border border-gray-200/70 dark:border-neutral-700/70 border-l-[5px] <?= h($border) ?> shadow-sm hover:shadow-md"
+   class="capability-card cap-card cap-maturity-<?= h((string)$m) ?> block p-2.5 rounded-md border border-gray-200/70 dark:border-neutral-700/70 border-l-[5px] <?= h($border) ?> shadow-sm hover:shadow-md"
    data-maturity="<?= h((string)$m) ?>">
   <div class="flex justify-between items-start gap-3">
     <h4 class="font-semibold text-sm text-gray-900 dark:text-neutral-50 leading-snug pr-2">
@@ -406,20 +411,110 @@ function sectionChrome(string $layerKey, array $tax): array {
 
 <script>
   // --- Filter + search state ---
-  let activeFilter = 'all';
-  let searchQuery = '';
+  const urlParams = new URLSearchParams(window.location.search);
+  const allowedMaturityFilters = new Set(['1', '2', '3', '4', '5']);
+  const queryMaturityRaw = (urlParams.get('maturity') || '').trim();
+  const queryMaturityList = queryMaturityRaw === ''
+    ? []
+    : queryMaturityRaw.split(',').map(v => v.trim()).filter(v => allowedMaturityFilters.has(v));
+  const querySearch = (urlParams.get('q') || '').trim();
+  const queryShowDesc = urlParams.get('show_desc');
+  const queryShowId = urlParams.get('show_id');
+  const queryShowMeta = urlParams.get('show_meta');
+  const queryShowTags = urlParams.get('show_tags');
+  const queryShowBg = urlParams.get('show_bg');
+
+  let activeMaturityFilters = new Set(queryMaturityList);
+  let searchQuery = querySearch;
 
   const cards = document.querySelectorAll('.capability-card');
   const searchInput = document.getElementById('searchInput');
   const buttons = document.querySelectorAll('.filter-btn');
+  const defaultMaturitySelection = ['1', '2', '3', '4', '5'];
 
-  function setFilter(level){ activeFilter = level; updateUI(); }
+  function parseBoolQuery(value){
+    if (value === null) return null;
+    if (value === '1' || value.toLowerCase() === 'true') return true;
+    if (value === '0' || value.toLowerCase() === 'false') return false;
+    return null;
+  }
+
+  function syncStateToQuery(){
+    const url = new URL(window.location.href);
+    const maturityValues = Array.from(activeMaturityFilters).sort();
+    if(maturityValues.length === 0 || maturityValues.length === defaultMaturitySelection.length){
+      url.searchParams.delete('maturity');
+    } else {
+      url.searchParams.set('maturity', maturityValues.join(','));
+    }
+
+    if(searchQuery === '') url.searchParams.delete('q');
+    else url.searchParams.set('q', searchQuery);
+
+    url.searchParams.set('show_desc', showDesc ? '1' : '0');
+    url.searchParams.set('show_id', showId ? '1' : '0');
+    url.searchParams.set('show_meta', showMeta ? '1' : '0');
+    url.searchParams.set('show_tags', showTags ? '1' : '0');
+    url.searchParams.set('show_bg', showBg ? '1' : '0');
+
+    window.history.replaceState({}, '', url.toString());
+  }
+
+  function setAllMaturityFilters(){
+    const allSelected = activeMaturityFilters.size === defaultMaturitySelection.length;
+    activeMaturityFilters = allSelected ? new Set() : new Set(defaultMaturitySelection);
+    syncStateToQuery();
+    updateUI();
+  }
+
+  function toggleMaturityFilter(level){
+    if (!allowedMaturityFilters.has(level)) return;
+    if (activeMaturityFilters.has(level)) {
+      activeMaturityFilters.delete(level);
+    } else {
+      activeMaturityFilters.add(level);
+    }
+
+    syncStateToQuery();
+    updateUI();
+  }
+
+  function clearAllFilters(){
+    searchQuery = '';
+    if (searchInput) searchInput.value = '';
+    activeMaturityFilters = new Set(defaultMaturitySelection);
+    showDesc = true;
+    showId = false;
+    showMeta = true;
+    showTags = true;
+    showBg = true;
+    saveBool(descKey, showDesc);
+    saveBool(idKey, showId);
+    saveBool(metaKey, showMeta);
+    saveBool(tagsKey, showTags);
+    saveBool(bgKey, showBg);
+    applyCardToggles();
+    syncStateToQuery();
+    updateUI();
+  }
 
   function updateUI(){
     // Buttons
     buttons.forEach(btn => {
-      if (btn.id === `btn-${activeFilter}`) btn.classList.add('active', 'ring-2', 'ring-offset-1', 'ring-blue-300');
-      else btn.classList.remove('active', 'ring-2', 'ring-offset-1', 'ring-blue-300');
+      const id = btn.id.replace('btn-', '');
+      if (id === 'all') {
+        const allSelected = activeMaturityFilters.size === defaultMaturitySelection.length;
+        btn.classList.toggle('active', allSelected);
+        btn.classList.toggle('ring-2', allSelected);
+        btn.classList.toggle('ring-offset-1', allSelected);
+        btn.classList.toggle('ring-blue-300', allSelected);
+      } else {
+        const selected = activeMaturityFilters.has(id);
+        btn.classList.toggle('active', selected);
+        btn.classList.toggle('ring-2', selected);
+        btn.classList.toggle('ring-offset-1', selected);
+        btn.classList.toggle('ring-blue-300', selected);
+      }
     });
 
     // Cards
@@ -427,7 +522,7 @@ function sectionChrome(string $layerKey, array $tax): array {
       const maturity = card.getAttribute('data-maturity') || '';
       const textContent = (card.innerText || '').toLowerCase();
 
-      const matchesMaturity = (activeFilter === 'all') || (maturity === activeFilter);
+      const matchesMaturity = activeMaturityFilters.has(maturity);
       const matchesSearch = (searchQuery === '') || (textContent.includes(searchQuery.toLowerCase()));
 
       if (matchesMaturity && matchesSearch) {
@@ -442,8 +537,10 @@ function sectionChrome(string $layerKey, array $tax): array {
   }
 
   if(searchInput){
+    searchInput.value = searchQuery;
     searchInput.addEventListener('input', (e) => {
       searchQuery = (e.target.value || '').trim();
+      syncStateToQuery();
       updateUI();
     });
   }
@@ -453,11 +550,13 @@ function sectionChrome(string $layerKey, array $tax): array {
   const idKey   = 'capmap_show_id';
   const metaKey = 'capmap_show_meta';
   const tagsKey = 'capmap_show_tags';
+  const bgKey   = 'capmap_show_bg';
 
   const toggleDesc = document.getElementById('toggleDesc');
   const toggleId   = document.getElementById('toggleId');
   const toggleMeta = document.getElementById('toggleMeta');
   const toggleTags = document.getElementById('toggleTags');
+  const toggleBg   = document.getElementById('toggleBg');
 
   function loadBool(key, fallback){
     try{
@@ -474,6 +573,23 @@ function sectionChrome(string $layerKey, array $tax): array {
   let showId   = loadBool(idKey,   false); // hidden by default
   let showMeta = loadBool(metaKey, true);
   let showTags = loadBool(tagsKey, true);
+  let showBg   = loadBool(bgKey,   true);
+
+  const queryShowDescVal = parseBoolQuery(queryShowDesc);
+  const queryShowIdVal = parseBoolQuery(queryShowId);
+  const queryShowMetaVal = parseBoolQuery(queryShowMeta);
+  const queryShowTagsVal = parseBoolQuery(queryShowTags);
+  const queryShowBgVal = parseBoolQuery(queryShowBg);
+
+  if (queryShowDescVal !== null) showDesc = queryShowDescVal;
+  if (queryShowIdVal !== null) showId = queryShowIdVal;
+  if (queryShowMetaVal !== null) showMeta = queryShowMetaVal;
+  if (queryShowTagsVal !== null) showTags = queryShowTagsVal;
+  if (queryShowBgVal !== null) showBg = queryShowBgVal;
+
+  if (activeMaturityFilters.size === 0) {
+    activeMaturityFilters = new Set(defaultMaturitySelection);
+  }
 
   function applyCardToggles(){
     const root = document.documentElement;
@@ -481,11 +597,13 @@ function sectionChrome(string $layerKey, array $tax): array {
     root.classList.toggle('hide-id',   !showId);
     root.classList.toggle('hide-meta', !showMeta);
     root.classList.toggle('hide-tags', !showTags);
+    root.classList.toggle('hide-card-bg', !showBg);
 
     if(toggleDesc) toggleDesc.checked = showDesc;
     if(toggleId)   toggleId.checked   = showId;
     if(toggleMeta) toggleMeta.checked = showMeta;
     if(toggleTags) toggleTags.checked = showTags;
+    if(toggleBg)   toggleBg.checked   = showBg;
   }
 
   function bindToggle(el, key, setter){
@@ -501,9 +619,11 @@ function sectionChrome(string $layerKey, array $tax): array {
   bindToggle(toggleId,   idKey,   (v)=> showId   = v);
   bindToggle(toggleMeta, metaKey, (v)=> showMeta = v);
   bindToggle(toggleTags, tagsKey, (v)=> showTags = v);
+  bindToggle(toggleBg,   bgKey,   (v)=> showBg   = v);
 
   // Init
   applyCardToggles();
+  syncStateToQuery();
   updateUI();
 
   // Content directory switcher
@@ -527,8 +647,11 @@ function sectionChrome(string $layerKey, array $tax): array {
         const result = await response.json();
 
         if(result.success){
-          // Reload page to show new content
-          window.location.reload();
+          // Reset all active filters/toggles when switching folder
+          const url = new URL(window.location.href);
+          url.search = '';
+          url.searchParams.set('map', key);
+          window.location.href = url.toString();
         } else {
           alert('Kunde inte byta katalog: ' + (result.error || 'Okänt fel'));
           e.target.value = originalValue;

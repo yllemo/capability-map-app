@@ -127,14 +127,34 @@ final class Markdown {
     $s = preg_replace('/_(.+?)_/s', '<em>$1</em>', $s);
 
     // links [text](url)
-    $s = preg_replace('/\[(.+?)\]\((.+?)\)/s', '<a href="$2" rel="noopener">$1</a>', $s);
+    // If target is not an absolute http(s) URL, treat it as a capability/file id.
+    $s = preg_replace_callback('/\[(.+?)\]\((.+?)\)/s', function($matches) {
+      $label = $matches[1];
+      $rawTarget = html_entity_decode($matches[2], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+      $target = trim($rawTarget);
 
-    // capability reference cap-xxx
-    $s = preg_replace_callback('/\b(cap-[a-z0-9\-]+)\b/i', function($matches) {
-      $capId = $matches[1];
-      $url = self::capUrl($capId);
-      return '<a href="' . htmlspecialchars($url, ENT_QUOTES) . '" class="cap-link">' . htmlspecialchars($capId) . '</a>';
+      if (!preg_match('/^https?:\/\//i', $target)) {
+        $id = preg_replace('/\.md$/i', '', $target);
+        $url = self::capUrl($id);
+        return '<a href="' . htmlspecialchars($url, ENT_QUOTES) . '" rel="noopener" class="cap-link">' . $label . '</a>';
+      }
+
+      return '<a href="' . htmlspecialchars($target, ENT_QUOTES) . '" rel="noopener">' . $label . '</a>';
     }, $s);
+
+    // capability reference cap-xxx (only in text nodes, not inside HTML tags)
+    $parts = preg_split('/(<[^>]+>)/', $s, -1, PREG_SPLIT_DELIM_CAPTURE);
+    if (is_array($parts)) {
+      foreach ($parts as $i => $part) {
+        if ($part === '' || $part[0] === '<') continue;
+        $parts[$i] = preg_replace_callback('/\b(cap-[a-z0-9\-]+)\b/i', function($matches) {
+          $capId = $matches[1];
+          $url = self::capUrl($capId);
+          return '<a href="' . htmlspecialchars($url, ENT_QUOTES) . '" class="cap-link">' . htmlspecialchars($capId) . '</a>';
+        }, $part);
+      }
+      $s = implode('', $parts);
+    }
 
     return $s;
   }

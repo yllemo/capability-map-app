@@ -5,6 +5,46 @@ date_default_timezone_set('Europe/Stockholm');
 mb_internal_encoding('UTF-8');
 ini_set('default_charset', 'UTF-8');
 
+function load_env_file(string $path): void {
+  if (!is_file($path) || !is_readable($path)) {
+    return;
+  }
+
+  $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+  if (!is_array($lines)) {
+    return;
+  }
+
+  foreach ($lines as $line) {
+    $line = trim((string)$line);
+    if ($line === '' || str_starts_with($line, '#')) {
+      continue;
+    }
+    if (!str_contains($line, '=')) {
+      continue;
+    }
+
+    [$key, $value] = array_map('trim', explode('=', $line, 2));
+    if ($key === '' || preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $key) !== 1) {
+      continue;
+    }
+
+    // Strip matching surrounding quotes.
+    if (
+      (str_starts_with($value, '"') && str_ends_with($value, '"')) ||
+      (str_starts_with($value, "'") && str_ends_with($value, "'"))
+    ) {
+      $value = substr($value, 1, -1);
+    }
+
+    putenv($key . '=' . $value);
+    $_ENV[$key] = $value;
+    $_SERVER[$key] = $value;
+  }
+}
+
+load_env_file(__DIR__ . '/../config/.env');
+
 // Secure session configuration
 if (session_status() === PHP_SESSION_NONE) {
   // OpenShift compatibility: Less strict cookie settings for container environments
@@ -40,6 +80,32 @@ function base_path(string $path = ''): string {
   return $bp . '/' . $path;
 }
 
+function app_base_url(): string {
+  $scheme = 'http';
+  if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+    $scheme = explode(',', (string)$_SERVER['HTTP_X_FORWARDED_PROTO'])[0];
+    $scheme = trim($scheme);
+  } elseif (
+    (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+    (isset($_SERVER['SERVER_PORT']) && (string)$_SERVER['SERVER_PORT'] === '443')
+  ) {
+    $scheme = 'https';
+  }
+
+  $host = (string)($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost');
+  $host = trim(explode(',', $host)[0]);
+  $host = rtrim($host, '/');
+
+  $bp = rtrim(cfg('app')['base_path'] ?? '', '/');
+  return $scheme . '://' . $host . $bp;
+}
+
+function absolute_url(string $path = ''): string {
+  $base = rtrim(app_base_url(), '/');
+  $path = ltrim($path, '/');
+  return $base . '/' . $path;
+}
+
 function h(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 
 /**
@@ -72,6 +138,14 @@ function get_selected_content_key(): string {
   }
 
   $dirs = get_content_dirs();
+
+  // Allow selecting map/folder via query string, e.g. ?map=content
+  $requested = trim((string)($_GET['map'] ?? ''));
+  if ($requested !== '' && isset($dirs[$requested])) {
+    $_SESSION['content_dir_key'] = $requested;
+    return $requested;
+  }
+
   $selected = $_SESSION['content_dir_key'] ?? '';
 
   // Validate that selected key exists

@@ -1,7 +1,7 @@
 <?php
 /** @var string $title */
 /** @var string $content */
-/** @var string $activeNav view|editor */
+/** @var string $activeNav view|editor|ai */
 /** @var array $extraHead */
 /** @var string $containerClass */
 $site = cfg('app')['site_name'] ?? 'Capability Maps';
@@ -36,6 +36,7 @@ $containerClass = $containerClass ?? 'container';
     <button class="btn btn--ghost" type="button" data-theme-toggle aria-label="Växla tema">🌓</button>
     <a class="btn btn--ghost <?= ($activeNav==='view'?'is-active':'') ?>" href="<?= h(base_path('view/index.php')) ?>">Viewer</a>
     <a class="btn btn--ghost <?= ($activeNav==='editor'?'is-active':'') ?>" href="<?= h(base_path('editor/index.php')) ?>">Editor</a>
+    <a class="btn btn--ghost <?= ($activeNav==='ai'?'is-active':'') ?>" href="<?= h(base_path('ai/index.php')) ?>">AI</a>
   </div>
 </header>
 

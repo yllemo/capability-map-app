@@ -140,13 +140,18 @@ if ($rel === '') {
   $editor .= '</div>'; // end meta grid
 
   $editor .= '<div class="grid grid--2" style="gap:10px">';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Markdown</label><textarea class="textarea" name="body">'.h($body).'</textarea></div>';
+  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Markdown</label>';
+  $editor .= '<input type="hidden" name="body" id="bodyInput" value="'.h($body).'">';
+  $editor .= '<textarea class="textarea" id="bodyFallback" style="display:none;height:52vh">'.h($body).'</textarea>';
+  $editor .= '<div id="markdownEditor" class="card" style="height:52vh;border:1px solid var(--border);border-radius:10px;overflow:hidden"></div>';
+  $editor .= '</div>';
   $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Preview</label><div class="card" style="height:52vh; overflow:auto"><div class="card__bd prose" id="preview"></div></div></div>';
   $editor .= '</div>';
 
   $editor .= '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">';
   $editor .= '<button class="btn btn--primary" type="submit">Spara</button>';
   $editor .= '<button type="button" class="btn btn--secondary" onclick="showRawEditor()">Raw Edit</button>';
+  $editor .= '<a class="btn btn--secondary" href="'.h(base_path('ai/index.php?file=' . rawurlencode($rel))).'">Öppna i AI Editor</a>';
   $editor .= '<a class="btn btn--ghost" href="'.h(base_path('view/capability.php?id=' . rawurlencode($meta['id'] ?? ''))).'">Öppna i viewer</a>';
   $editor .= '<a class="btn btn--ghost" href="download.php?file='.rawurlencode($rel).'" download="'.h(basename($rel)).'" title="Ladda ner markdown-filen">';
   $editor .= '<svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
@@ -196,24 +201,95 @@ if ($rel === '') {
 
   $editor .= '<script>
     (function(){
-      const ta = document.querySelector("textarea[name=body]");
+      const bodyInput = document.getElementById("bodyInput");
+      const fallbackTa = document.getElementById("bodyFallback");
+      const editorHost = document.getElementById("markdownEditor");
       const pv = document.getElementById("preview");
       const form = document.querySelector("form[action=\'save.php\']");
       let hasUnsavedChanges = false;
-      const originalContent = ta.value;
+      const originalContent = bodyInput.value;
+      let monacoEditor = null;
+
+      function getBodyValue(){
+        if (monacoEditor) return monacoEditor.getValue();
+        if (fallbackTa) return fallbackTa.value;
+        return bodyInput.value || "";
+      }
+
+      function setBodyValue(value){
+        bodyInput.value = value;
+      }
 
       async function render(){
         const fd = new FormData();
-        fd.set("md", ta.value);
+        const currentValue = getBodyValue();
+        setBodyValue(currentValue);
+        fd.set("md", currentValue);
         const res = await fetch("render.php", {method:"POST", body: fd});
         pv.innerHTML = await res.text();
       }
 
-      // Track changes in textarea and all inputs
-      ta.addEventListener("input", ()=>{
-        hasUnsavedChanges = (ta.value !== originalContent);
+      function handleBodyInput(){
+        const currentValue = getBodyValue();
+        setBodyValue(currentValue);
+        hasUnsavedChanges = (currentValue !== originalContent);
         window.clearTimeout(window.__pvT);
         window.__pvT=setTimeout(render, 150);
+      }
+
+      function initFallback(){
+        if (!fallbackTa || !editorHost) return;
+        editorHost.style.display = "none";
+        fallbackTa.style.display = "block";
+        fallbackTa.addEventListener("input", handleBodyInput);
+      }
+
+      function initMonaco(){
+        return new Promise((resolve) => {
+          if (!window.require) {
+            const loader = document.createElement("script");
+            loader.src = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js";
+            loader.onload = setupRequire;
+            loader.onerror = () => resolve(false);
+            document.head.appendChild(loader);
+          } else {
+            setupRequire();
+          }
+
+          function setupRequire(){
+            if (!window.require) {
+              resolve(false);
+              return;
+            }
+            window.require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs" } });
+            window.require(["vs/editor/editor.main"], function(){
+              if (!editorHost) {
+                resolve(false);
+                return;
+              }
+              monacoEditor = monaco.editor.create(editorHost, {
+                value: bodyInput.value || "",
+                language: "markdown",
+                theme: document.documentElement.classList.contains("dark") ? "vs-dark" : "vs",
+                automaticLayout: true,
+                minimap: { enabled: false },
+                wordWrap: "on",
+                fontSize: 14,
+                lineNumbers: "on",
+                scrollBeyondLastLine: false,
+              });
+              monacoEditor.onDidChangeModelContent(handleBodyInput);
+              resolve(true);
+            }, function(){
+              resolve(false);
+            });
+          }
+        });
+      }
+
+      initMonaco().then((ok) => {
+        if (!ok) initFallback();
+        render();
       });
 
       const inputs = form.querySelectorAll("input, select, textarea");
@@ -237,10 +313,9 @@ if ($rel === '') {
 
       // Reset flag on form submit
       form.addEventListener("submit", () => {
+        setBodyValue(getBodyValue());
         hasUnsavedChanges = false;
       });
-
-      render();
     })();
 
     // Raw Editor functions
