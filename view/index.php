@@ -292,8 +292,9 @@ function sectionChrome(string $layerKey, array $tax): array {
                 $m = (int)($cap->get($heatField, 0));
                 $m = max(0, min(5, $m));
                 $border = maturityColorClass($m ?: 1);
+                $capHref = base_path('view/capability.php?id=' . rawurlencode($cap->id) . '&map=' . rawurlencode($selectedKey));
               ?>
-<a href="<?= h(base_path('view/capability.php?id=' . rawurlencode($cap->id))) ?>"
+<a href="<?= h($capHref) ?>"
    class="capability-card cap-card cap-maturity-<?= h((string)$m) ?> block p-2.5 rounded-md border border-gray-200/70 dark:border-neutral-700/70 border-l-[5px] <?= h($border) ?> shadow-sm hover:shadow-md"
    data-maturity="<?= h((string)$m) ?>">
   <div class="flex justify-between items-start gap-3">

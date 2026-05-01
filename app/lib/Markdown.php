@@ -162,7 +162,14 @@ final class Markdown {
   private static function capUrl(string $id): string {
     // Use base_path if available (from bootstrap.php)
     if (function_exists('base_path')) {
-      return base_path('view/capability.php?id=' . rawurlencode($id));
+      $path = 'view/capability.php?id=' . rawurlencode($id);
+      if (function_exists('get_selected_content_key')) {
+        $map = (string)get_selected_content_key();
+        if ($map !== '') {
+          $path .= '&map=' . rawurlencode($map);
+        }
+      }
+      return base_path($path);
     }
     // Fallback for when base_path is not available
     return '/view/capability.php?id=' . rawurlencode($id);

@@ -3,8 +3,6 @@ require __DIR__ . '/../editor/_auth.php';
 require_auth();
 header('Content-Type: text/html; charset=UTF-8');
 
-use App\PathGuard;
-
 $contentDir = get_content_dir();
 $aiCfg = cfg('ai');
 $systemPrompt = (string)($aiCfg['default_system_prompt'] ?? '');
@@ -24,16 +22,6 @@ foreach ($it as $f) {
 sort($files);
 if ($rel === '' && !empty($files)) $rel = $files[0];
 
-if ($rel !== '') {
-  try {
-    $abs = PathGuard::safeJoin($contentDir, $rel);
-    if (is_file($abs)) $markdown = (string)file_get_contents($abs);
-  } catch (Throwable $e) {
-    $notice = 'Ogiltig fil';
-    $rel = '';
-  }
-}
-
 $sidebar = '<div class="card"><div class="card__hd"><strong>AI filer</strong></div><div class="card__bd" style="display:flex;flex-direction:column;gap:6px;max-height:75vh;overflow:auto">';
 foreach ($files as $f) {
   $active = ($f === $rel) ? 'style="border-color: color-mix(in srgb, var(--primary) 60%, var(--border))"' : '';
@@ -42,6 +30,7 @@ foreach ($files as $f) {
 $sidebar .= '</div></div>';
 
 $mcpUrl = absolute_url('mcp/index.php');
+$mcpPath = base_path('mcp/index.php');
 $chatUrl = base_path('ai/chat.php');
 $saveUrl = base_path('ai/save.php');
 
@@ -78,14 +67,44 @@ if ($rel === '') {
       const markdownInput = document.getElementById("markdownInput");
       const saveForm = document.getElementById("aiSaveForm");
       const workingIndicator = document.getElementById("aiWorkingIndicator");
+      const mcpPath = ' . json_encode($mcpPath) . ';
+      const file = ' . json_encode($rel) . ';
 
       function setNotes(html){
         notes.innerHTML = "<div class=\"card__bd prose\">" + html + "</div>";
       }
 
+      async function mcpCall(method, params){
+        const res = await fetch(mcpPath, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ method, params: params || {} }),
+        });
+        const data = await res.json();
+        if(!res.ok || data.error){
+          throw new Error(data.error || ("MCP fel (" + res.status + ")"));
+        }
+        return data;
+      }
+
+      async function loadMarkdownFromMcp(){
+        if(!file) return;
+        try {
+          const data = await mcpCall("capabilities/read", { file });
+          if (typeof data.markdown === "string") {
+            markdownEl.value = data.markdown;
+            markdownInput.value = data.markdown;
+          }
+        } catch(err){
+          setNotes("<p style=\"color:#b91c1c\">Kunde inte läsa markdown via MCP: " + String(err.message || err).replace(/</g, "&lt;") + "</p>");
+        }
+      }
+
       saveForm.addEventListener("submit", function(){
         markdownInput.value = markdownEl.value;
       });
+
+      loadMarkdownFromMcp();
 
       runBtn.addEventListener("click", async function(){
         const instruction = (instructionEl.value || "").trim();

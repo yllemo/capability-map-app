@@ -13,6 +13,7 @@ $containerClass = $containerClass ?? 'container';
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= h($title) ?> – <?= h($site) ?></title>
+  <link rel="icon" href="<?= h(base_path('assets/favicon.svg')) ?>" type="image/svg+xml">
   <link rel="stylesheet" href="<?= h(base_path('assets/app.css')) ?>">
   <script defer src="<?= h(base_path('assets/app.js')) ?>"></script>
   <?php foreach ($extraHead as $tag) echo $tag . "\n"; ?>

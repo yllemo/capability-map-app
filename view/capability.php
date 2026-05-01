@@ -13,11 +13,35 @@ $id = trim($_GET['id'] ?? '');
 if ($id === '') { http_response_code(400); echo 'Missing id'; exit; }
 
 // Use selected content directory
+$selectedKey = get_selected_content_key();
 $contentDir = get_content_dir();
 $repo = new CapabilityRepository($contentDir);
 $data = $repo->byId($id);
 
-if (!$data) { http_response_code(404); echo 'Not found'; exit; }
+if (!$data) {
+  // Fallback: try all configured content folders if map is missing/wrong.
+  $dirs = get_content_dirs();
+  foreach ($dirs as $key => $dirInfo) {
+    if ($key === $selectedKey) continue;
+    $candidateRepo = new CapabilityRepository((string)$dirInfo['path']);
+    $candidate = $candidateRepo->byId($id);
+    if (!$candidate) continue;
+
+    // Persist the found folder and canonicalize URL with map param.
+    set_content_dir($key);
+    $selectedKey = $key;
+    $contentDir = (string)$dirInfo['path'];
+    $data = $candidate;
+
+    $target = base_path('view/capability.php?id=' . rawurlencode($id) . '&map=' . rawurlencode($key));
+    header('Location: ' . $target, true, 302);
+    exit;
+  }
+
+  http_response_code(404);
+  echo 'Not found';
+  exit;
+}
 
 $cap = $data['cap'];
 $body = (string)($data['body'] ?? '');
@@ -53,11 +77,16 @@ function getLogoHtml(array $uiCfg): string {
   return '<div class="' . $containerClasses . '">' . h($fallbackText) . '</div>';
 }
 
-// Calculate relative path from content_dir for editor link
+// Calculate relative path from currently selected content directory for editor link
 $relPath = '';
-if ($cap->path && str_starts_with($cap->path, $app['content_dir'])) {
-  $relPath = ltrim(str_replace($app['content_dir'], '', $cap->path), DIRECTORY_SEPARATOR);
-  $relPath = str_replace(DIRECTORY_SEPARATOR, '/', $relPath);
+if (!empty($cap->path)) {
+  $capPathNorm = str_replace('\\', '/', (string)$cap->path);
+  $contentDirNorm = rtrim(str_replace('\\', '/', (string)$contentDir), '/');
+  $prefix = $contentDirNorm . '/';
+
+  if (str_starts_with($capPathNorm, $prefix)) {
+    $relPath = substr($capPathNorm, strlen($prefix));
+  }
 }
 
 function metaRow(string $k, $v): string {
@@ -100,10 +129,10 @@ $meta = $cap->meta;
       </div>
       <div class="flex items-center gap-2">
         <a class="px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
-           href="<?= h(base_path('view/index.php')) ?>">← Karta</a>
+           href="<?= h(base_path('view/index.php?map=' . rawurlencode($selectedKey))) ?>">← Karta</a>
         <?php if ($relPath): ?>
           <a class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
-             href="<?= h(base_path('editor/index.php?file=' . rawurlencode($relPath))) ?>">
+             href="<?= h(base_path('editor/index.php?file=' . rawurlencode($relPath) . '&map=' . rawurlencode($selectedKey))) ?>">
             <svg class="h-4 w-4 text-gray-500 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
             </svg>
