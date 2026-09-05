@@ -2,6 +2,44 @@
 
 En fullständig Enterprise Architecture capability map-applikation byggd med PHP och Markdown.
 
+## Importera JSON från capability-map-skill
+
+Öppna editorn och välj **Importera JSON**, välj målkarta och ladda upp en fil enligt
+skillens `export-html-json.md` (högst 5 MB / 2 000 förmågor).
+Importen validerar hela filen och skapar en egen undermapp med Markdown-filer.
+`strategic`, `core` och `support` mappas till appens skikt; `status` mappas till
+`maturity` 1–5. Område sätts till `Importerade förmågor` och kan sedan redigeras.
+Länkar följer med. Organisation, kartbeskrivning och övriga originalfält bevaras
+i undermappens `source.json`; de ändrar inte appens globala inställningar.
+Befintliga förmågor skrivs inte över och samma JSON-karta kan inte importeras igen.
+En ändrad JSON-karta räknas som en ny import, inte som en uppdatering.
+
+Knappen finns bara i editorn och importen använder editorns autentisering och
+CSRF-skydd. Både målkatalogen och `storage/` måste vara skrivbara för PHP.
+
+Exempel på en JSON-fil:
+
+```json
+{
+  "version": "1.0",
+  "organization": "Exempelorganisation",
+  "capabilities": [
+    {
+      "id": 1,
+      "title": "Informationshantering",
+      "description": "Förmåga att strukturera och tillgängliggöra information.",
+      "layer": "core",
+      "status": "defined"
+    }
+  ]
+}
+```
+
+Tillåtna statusvärden är `initial`, `developing`, `defined`, `managed` och
+`optimized`. Varje förmåga behöver ett unikt positivt heltals-ID, titel,
+beskrivning, skikt och status. `url` är valfritt. Felaktiga filer avvisas med
+ett felmeddelande innan några förmågor sparas.
+
 ![Capability Map App Overview](capability-map-app-overview.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -37,6 +75,21 @@ open http://localhost:8080/view/index.php
 - 📱 Mobiloptimerad med icke-sticky headers på mobila enheter
 - 🎨 Konfigurerbar UI via config-filer (texter och logo)
 
+### Översiktsvy (`/view/overview.php`)
+
+- Separat alternativ till den klassiska kartan med samma Markdown-innehåll.
+- Färgade skiktrubriker och enkla kort med beskrivning och mognadsetikett.
+- Kartval, filter och statistik är hopfällda från början; klicka på raden för att öppna.
+- Sök på namn, beskrivning, ID och taggar; filtrera på skikt, område och mognad.
+- Mognadsfärger: röd, gul, blå, grön och lila för nivå 1–5; grå för ej bedömd.
+- Klicka på ett kort för att öppna detaljsidan. Länken **Klassisk vy** behåller vald karta.
+- Responsiv layout och gemensamt ljust/mörkt tema.
+
+### Detaljvy (`/view/capability.php`)
+
+Nedladdningsikonen bredvid **Redigera** hämtar förmågan som `.md`, inklusive
+hela originalets metadata och brödtext.
+
 ### Editor (`/editor/index.php`)
 - ✏️ Markdown-editor med live preview
 - 📝 YAML frontmatter-redigering
@@ -48,6 +101,25 @@ open http://localhost:8080/view/index.php
 - ⚠️ Varning vid osparade ändringar
 - ✅ Success/error feedback-meddelanden
 - 🛡️ Validering av duplicerade ID:n
+- 📥 Importera JSON från capability-map-skill till vald karta
+
+### Gemensam favicon
+
+Alla appens webbsidor använder `assets/favicon.svg` via
+`app/templates/favicon.php`. Filens ändringstid versionsmärker adressen för
+att uppdaterade ikoner ska hämtas av webbläsaren.
+
+### Kontroller för utveckling
+
+```bash
+php tests/capability_json_import.php
+php tests/frontmatter_empty_fields.php
+node --check assets/overview.js
+```
+
+PHP-testerna kontrollerar JSON-konvertering och att tomma metadatafält kan läsas
+utan att bli listor. Testa även sparning, radering och vyernas layout i en
+PHP-miljö innan driftsättning.
 
 ### Säkerhet
 - 🔐 Session-baserad autentisering för editor

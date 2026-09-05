@@ -3,6 +3,7 @@ require __DIR__ . '/_auth.php';
 require_auth();
 
 use App\PathGuard;
+use App\Logger;
 
 // CSRF protection
 if (!csrf_verify($_POST['csrf_token'] ?? '')) {
@@ -38,7 +39,6 @@ if (!is_file($abs)) {
 // Delete the file
 if (@unlink($abs)) {
   // Log the delete action
-  use App\Logger;
   Logger::audit('capability_deleted', ['file' => $rel]);
 
   // Try to remove empty parent directories

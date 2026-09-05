@@ -91,11 +91,10 @@ function sectionChrome(string $layerKey, array $tax): array {
 ?><!DOCTYPE html>
 <html lang="sv" class="antialiased">
 <head>
+  <?php require __DIR__ . '/../app/templates/favicon.php'; ?>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= h($uiCfg['page_title'] ?? 'Förmågekarta') ?></title>
-  <link rel="icon" href="<?= h(base_path($uiCfg['favicon']['svg'] ?? 'assets/favicon.svg')) ?>" type="image/svg+xml">
-  <link rel="icon" href="<?= h(base_path($uiCfg['favicon']['png'] ?? 'assets/favicon.png')) ?>" type="image/png">
 
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -168,6 +167,7 @@ function sectionChrome(string $layerKey, array $tax): array {
               <?= h($uiCfg['filter_button_text'] ?? 'Filter') ?>
             </button>
 
+            <a href="<?= h(base_path('view/overview.php?map=' . rawurlencode($selectedKey))) ?>" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800" title="Testa den nya översiktsvyn">Översiktsvy ↗</a>
             <a href="<?= h(base_path('view/help.php')) ?>"
                class="inline-flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
                title="Hjälp & Best Practices">

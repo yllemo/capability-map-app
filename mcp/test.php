@@ -9,10 +9,10 @@ $mcpAbsoluteUrl = absolute_url('mcp/index.php');
 <!doctype html>
 <html lang="sv">
 <head>
+  <?php require __DIR__ . '/../app/templates/favicon.php'; ?>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MCP Test</title>
-  <link rel="icon" href="<?= h(base_path('assets/favicon.svg')) ?>" type="image/svg+xml">
   <link rel="stylesheet" href="<?= h(base_path('assets/app.css')) ?>">
   <style>
     body { padding: 20px; max-width: 1100px; margin: 0 auto; }

@@ -34,6 +34,7 @@ if (!$data) {
     $data = $candidate;
 
     $target = base_path('view/capability.php?id=' . rawurlencode($id) . '&map=' . rawurlencode($key));
+    if (($_GET['download'] ?? '') === 'md') $target .= '&download=md';
     header('Location: ' . $target, true, 302);
     exit;
   }
@@ -44,6 +45,24 @@ if (!$data) {
 }
 
 $cap = $data['cap'];
+if (($_GET['download'] ?? '') === 'md') {
+  $content = file_get_contents($cap->path);
+  if ($content === false) {
+    http_response_code(500);
+    echo 'Failed to read file';
+    exit;
+  }
+
+  $filename = pathinfo($cap->path, PATHINFO_FILENAME) . '.md';
+  $fallbackFilename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename);
+  header('Content-Type: text/markdown; charset=UTF-8');
+  header('Content-Disposition: attachment; filename="' . $fallbackFilename . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
+  header('Content-Length: ' . strlen($content));
+  header('Cache-Control: no-store');
+  echo $content;
+  exit;
+}
+
 $body = (string)($data['body'] ?? '');
 $bodyHtml = Markdown::toHtml($body);
 
@@ -100,11 +119,10 @@ $meta = $cap->meta;
 ?><!doctype html>
 <html lang="sv" class="antialiased">
 <head>
+  <?php require __DIR__ . '/../app/templates/favicon.php'; ?>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= h($cap->name) ?> – <?= h($uiCfg['title'] ?? 'Förmågekarta') ?></title>
-  <link rel="icon" href="<?= h(base_path($uiCfg['favicon']['svg'] ?? 'assets/favicon.svg')) ?>" type="image/svg+xml">
-  <link rel="icon" href="<?= h(base_path($uiCfg['favicon']['png'] ?? 'assets/favicon.png')) ?>" type="image/png">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -139,6 +157,13 @@ $meta = $cap->meta;
             Redigera
           </a>
         <?php endif; ?>
+        <a href="<?= h(base_path('view/capability.php?id=' . rawurlencode($id) . '&map=' . rawurlencode($selectedKey) . '&download=md')) ?>"
+           class="inline-flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
+           title="Ladda ner förmågan som Markdown (.md)" aria-label="Ladda ner förmågan som Markdown (.md)">
+          <svg class="h-5 w-5 text-gray-600 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m-4-4 4 4 4-4M5 16v4a1 1 0 001 1h12a1 1 0 001-1v-4"/>
+          </svg>
+        </a>
         <a href="<?= h(base_path('view/help.php')) ?>"
            class="inline-flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
            title="Hjälp & Best Practices">

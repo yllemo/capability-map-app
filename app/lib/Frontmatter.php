@@ -92,7 +92,8 @@ final class Frontmatter {
           $i++;
         }
 
-        $meta[$key] = $items;
+        // An empty scalar (e.g. owner:) is not a list. Keep it editable as text.
+        $meta[$key] = $items === [] ? '' : $items;
         continue;
       }
 
@@ -104,6 +105,10 @@ final class Frontmatter {
   private static function parseScalar(string $v): mixed {
     $v = trim($v);
     // quoted
+    if (str_starts_with($v, '"') && str_ends_with($v, '"')) {
+      $decoded = json_decode($v, true);
+      if (is_string($decoded)) return $decoded;
+    }
     if ((str_starts_with($v, '"') && str_ends_with($v, '"')) || (str_starts_with($v, "'") && str_ends_with($v, "'"))) {
       return substr($v, 1, -1);
     }

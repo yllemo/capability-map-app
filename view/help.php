@@ -2,11 +2,10 @@
 <!DOCTYPE html>
 <html lang="sv" class="antialiased">
 <head>
+  <?php require __DIR__ . '/../app/templates/favicon.php'; ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Best Practices: Förmågekartor (Capability Maps)</title>
-    <link rel="icon" href="<?= h(base_path('assets/favicon.svg')) ?>" type="image/svg+xml">
-    <link rel="icon" href="<?= h(base_path('assets/favicon.png')) ?>" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
