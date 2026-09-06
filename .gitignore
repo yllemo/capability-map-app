@@ -27,6 +27,7 @@ config/.env.*
 # Config overrides and sensitive files
 config/auth.local.php
 config/app.local.php
+config/content.local.json
 config/auth.php
 config/ai.local.php
 

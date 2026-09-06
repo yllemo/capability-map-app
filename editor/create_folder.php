@@ -34,90 +34,29 @@ if (!preg_match('/^[a-z0-9_\-]+$/', $key)) {
   exit;
 }
 
-// Check if key already exists
-$existingDirs = get_content_dirs();
-if (isset($existingDirs[$key])) {
+// New maps are always created under the common content root.
+$lock = null;
+$newDirPath = null;
+$created = false;
+try {
+  $root = get_content_root();
+  if ($root === null) throw new RuntimeException('Kör först Flytta innehåll till /content i editorn.');
+  $lock = fopen(__DIR__ . '/../storage/content-migration.lock', 'c');
+  if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) throw new RuntimeException('En annan katalogändring pågår. Försök igen.');
+  $configPath = __DIR__ . '/../config/content.local.json';
+  $config = json_decode((string)file_get_contents($configPath), true, 32, JSON_THROW_ON_ERROR);
+  if (isset($config['content_dirs'][$key])) throw new RuntimeException('Folder-nyckeln används redan.');
+  $newDirPath = rtrim($root, '/\\') . '/' . $key;
+  if (file_exists($newDirPath) || is_link($newDirPath)) throw new RuntimeException('Katalogen finns redan.');
+  if (!mkdir($newDirPath, 0775)) throw new RuntimeException('Kunde inte skapa katalogen.');
+  $created = true;
+  $config['content_dirs'][$key] = ['folder' => $key, 'label' => $label, 'description' => $description];
+  App\ContentMigration::writeConfig(dirname(__DIR__), $config);
+  echo json_encode(['success' => true, 'key' => $key, 'label' => $label, 'path' => $newDirPath]);
+} catch (Throwable $e) {
+  if ($created) @rmdir($newDirPath);
   http_response_code(400);
-  echo json_encode(['success' => false, 'error' => 'Folder-nyckeln används redan']);
-  exit;
-}
-
-// Create the physical directory
-$newDirPath = __DIR__ . '/../' . $key;
-if (file_exists($newDirPath)) {
-  http_response_code(400);
-  echo json_encode(['success' => false, 'error' => 'Katalogen finns redan i filsystemet']);
-  exit;
-}
-
-if (!@mkdir($newDirPath, 0775, true)) {
-  http_response_code(500);
-  echo json_encode(['success' => false, 'error' => 'Kunde inte skapa katalog i filsystemet']);
-  exit;
-}
-
-// Update config/app.php
-$configPath = __DIR__ . '/../config/app.php';
-$configContent = file_get_contents($configPath);
-
-if ($configContent === false) {
-  http_response_code(500);
-  echo json_encode(['success' => false, 'error' => 'Kunde inte läsa config-filen']);
-  exit;
-}
-
-// Find the content_dirs array and add the new entry
-// We'll add it before the closing ];
-$newEntry = "    '{$key}' => [\n";
-$newEntry .= "      'path' => __DIR__ . '/../{$key}',\n";
-$newEntry .= "      'label' => " . var_export($label, true) . ",\n";
-$newEntry .= "      'description' => " . var_export($description, true) . ",\n";
-$newEntry .= "    ],\n";
-
-// Find the last entry in content_dirs and add after it
-// Look for the pattern: content_dirs => [ ... ]
-if (preg_match("/'content_dirs'\s*=>\s*\[(.*?)\s*\]/s", $configContent, $matches)) {
-  $contentDirsContent = $matches[1];
-
-  // Check if there are any commented examples we should add before
-  if (preg_match('/\/\/\s*Example:.*?\/\/\s*\}/s', $contentDirsContent, $commentMatch)) {
-    // Add before the commented example
-    $updatedContentDirs = str_replace(
-      $commentMatch[0],
-      $newEntry . '    ' . $commentMatch[0],
-      $contentDirsContent
-    );
-  } else {
-    // Just add at the end
-    $updatedContentDirs = rtrim($contentDirsContent) . "\n" . $newEntry . '  ';
-  }
-
-  $updatedConfig = preg_replace(
-    "/'content_dirs'\s*=>\s*\[(.*?)\s*\]/s",
-    "'content_dirs' => [\n{$updatedContentDirs}]",
-    $configContent,
-    1
-  );
-
-  // Write back to config file
-  if (@file_put_contents($configPath, $updatedConfig, LOCK_EX) === false) {
-    // Rollback: delete the directory we created
-    @rmdir($newDirPath);
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Kunde inte uppdatera config-filen']);
-    exit;
-  }
-
-  echo json_encode([
-    'success' => true,
-    'key' => $key,
-    'label' => $label,
-    'path' => $newDirPath
-  ]);
-} else {
-  // Rollback: delete the directory we created
-  @rmdir($newDirPath);
-  http_response_code(500);
-  echo json_encode(['success' => false, 'error' => 'Kunde inte hitta content_dirs i config-filen']);
-  exit;
+  echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+} finally {
+  if (is_resource($lock)) { flock($lock, LOCK_UN); fclose($lock); }
 }

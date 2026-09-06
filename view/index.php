@@ -1,5 +1,7 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
+$mapInterface = 'classic';
+require __DIR__ . '/../app/map_interface.php';
 header('Content-Type: text/html; charset=UTF-8');
 
 use App\CapabilityRepository;
@@ -91,6 +93,7 @@ function sectionChrome(string $layerKey, array $tax): array {
 ?><!DOCTYPE html>
 <html lang="sv" class="antialiased">
 <head>
+  <link rel="stylesheet" href="<?= h(base_path('assets/interface-toggle.css')) ?>">
   <?php require __DIR__ . '/../app/templates/favicon.php'; ?>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -167,7 +170,7 @@ function sectionChrome(string $layerKey, array $tax): array {
               <?= h($uiCfg['filter_button_text'] ?? 'Filter') ?>
             </button>
 
-            <a href="<?= h(base_path('view/overview.php?map=' . rawurlencode($selectedKey))) ?>" class="inline-flex items-center px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800" title="Testa den nya översiktsvyn">Översiktsvy ↗</a>
+            <?php require __DIR__ . '/../app/templates/interface_toggle.php'; ?>
             <a href="<?= h(base_path('view/help.php')) ?>"
                class="inline-flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
                title="Hjälp & Best Practices">

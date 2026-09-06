@@ -1,5 +1,7 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
+$mapInterface = 'new';
+require __DIR__ . '/../app/map_interface.php';
 header('Content-Type: text/html; charset=UTF-8');
 
 $tax = cfg('taxonomy');
@@ -32,6 +34,7 @@ $layerChrome = [
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Förmågekarta · Översikt</title>
   <link rel="stylesheet" href="<?= h(base_path('assets/overview.css')) ?>">
+  <link rel="stylesheet" href="<?= h(base_path('assets/interface-toggle.css')) ?>">
   <script defer src="<?= h(base_path('assets/app.js')) ?>"></script>
   <script defer src="<?= h(base_path('assets/overview.js')) ?>"></script>
 </head>
@@ -40,7 +43,7 @@ $layerChrome = [
 <header class="site-header">
   <div class="brand"><span class="brand-symbol" aria-hidden="true">▦</span><div><strong>Förmågekarta</strong><span>Verksamhetens förmågor, samlade</span></div></div>
   <nav aria-label="Vyer och verktyg">
-    <a href="<?= h(base_path('view/index.php' . $mapQuery)) ?>">Klassisk vy ↗</a>
+    <?php require __DIR__ . '/../app/templates/interface_toggle.php'; ?>
     <a href="<?= h(base_path('editor/index.php' . $mapQuery)) ?>">Editor</a>
     <button type="button" data-theme-toggle aria-label="Växla ljust och mörkt tema" title="Växla tema">◐</button>
   </nav>

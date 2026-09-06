@@ -70,6 +70,16 @@ function cfg(string $name): array {
   if (!isset($cache[$name])) {
     $path = __DIR__ . '/../config/' . $name . '.php';
     $cache[$name] = file_exists($path) ? require $path : [];
+    if ($name === 'app' && is_file(__DIR__ . '/../config/content.local.json')) {
+      $contentConfig = json_decode((string)file_get_contents(__DIR__ . '/../config/content.local.json'), true, 32, JSON_THROW_ON_ERROR);
+      $root = __DIR__ . '/../' . $contentConfig['content_root'];
+      $cache[$name]['content_root'] = $root;
+      $cache[$name]['content_dirs'] = $contentConfig['content_dirs'];
+      foreach ($cache[$name]['content_dirs'] as &$dir) {
+        $dir['path'] = $root . '/' . $dir['folder'];
+      }
+      unset($dir);
+    }
   }
   return $cache[$name];
 }
@@ -126,6 +136,11 @@ function get_content_dirs(): array {
     ];
   }
   return $dirs;
+}
+
+/** Null means the installation still uses its legacy content paths. */
+function get_content_root(): ?string {
+  return cfg('app')['content_root'] ?? null;
 }
 
 /**

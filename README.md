@@ -82,7 +82,8 @@ open http://localhost:8080/view/index.php
 - Kartval, filter och statistik är hopfällda från början; klicka på raden för att öppna.
 - Sök på namn, beskrivning, ID och taggar; filtrera på skikt, område och mognad.
 - Mognadsfärger: röd, gul, blå, grön och lila för nivå 1–5; grå för ej bedömd.
-- Klicka på ett kort för att öppna detaljsidan. Länken **Klassisk vy** behåller vald karta.
+- Klicka på ett kort för att öppna detaljsidan. Växlaren **Klassisk / Ny vy** behåller vald karta.
+- Valet sparas i webbläsaren i ett år. Startsidan och kartlänkar öppnar sedan det valda gränssnittet; utan sparat val används den klassiska vyn.
 - Responsiv layout och gemensamt ljust/mörkt tema.
 
 ### Detaljvy (`/view/capability.php`)
@@ -114,6 +115,7 @@ att uppdaterade ikoner ska hämtas av webbläsaren.
 ```bash
 php tests/capability_json_import.php
 php tests/frontmatter_empty_fields.php
+php tests/content_migration.php
 node --check assets/overview.js
 ```
 
@@ -297,6 +299,18 @@ Indikerar hur viktig förmågan är för verksamheten:
 
 ## 🆕 Senaste uppdateringar
 
+### Gemensam innehållsrot och valbart gränssnitt
+
+- **Klassisk / Ny vy** ersätter länkarna mellan kartvyerna och kommer ihåg valet i webbläsaren.
+- **Flytta innehåll till /content** finns i editorns sidopanel före migreringen.
+  Verktyget visar källor och mål från konfigurationen innan flytten startas.
+- Befintliga installationer fortsätter använda sina nuvarande kataloger tills
+  migreringen körs. Att uppdatera appens kod flyttar inga innehållsfiler.
+- Efter migreringen skapas nya kartkataloger under den gemensamma roten.
+
+Se [Gemensam innehållsrot och migrering](#gemensam-innehållsrot-och-migrering)
+för säkerhetskopiering, rättigheter och återställning.
+
 ### Excel Export
 - **Valmöjlighet**: Exportera endast aktuell katalog eller alla kataloger
 - **Dropdown-meny**: Enkelt val mellan export-alternativ
@@ -321,6 +335,40 @@ Indikerar hur viktig förmågan är för verksamheten:
 - **Debug-endpoints**: `/view/debug_session.php` och `/view/reset_session.php` för felsökning
 
 ## Multi-folder support
+
+### Gemensam innehållsrot och migrering
+
+Öppna **Editor → Flytta innehåll till /content** (`editor/migrate_content.php`).
+Sidan läser katalogerna från konfigurationen och visar exakt vilka sökvägar som
+kommer att flyttas. Kör flytten under ett underhållsfönster, efter säkerhetskopiering
+och utan andra samtidiga användare. PHP behöver skrivrättighet till appens rot,
+`config/`, `storage/` och kartkatalogerna.
+
+Exempel efter migrering:
+
+```text
+content/
+  content/       # tidigare /content, inklusive alla undermappar och filer
+  content2/      # tidigare /content2
+```
+
+Koden använder de gamla sökvägarna tills du trycker på migreringsknappen.
+Verktyget hanterar flytten av `/content` via en tillfällig katalog, kontrollerar
+kollisioner och aktiverar den nya konfigurationen sist. Vanliga fel återställer
+flyttarna. Om PHP-processen avbryts måste administratören återställa manuellt med
+hjälp av `storage/content-migration-*/plan.json` eller säkerhetskopian.
+
+Efter flytten används **`config/content.local.json`** i stället för `content_dirs`
+i `config/app.php`. Filen är lokal och ignoreras av Git; säkerhetskopiera den ihop
+med innehållet. Den innehåller `content_root` relativt applikationsroten och
+`content_dirs` med `folder`, `label` och `description` per karta. Alla vyer,
+editorn, import/export, AI och MCP får sökvägar via samma konfigurationsfunktioner.
+Nya kartkataloger skapas i editorn under innehållsroten. På äldre installationer
+måste migreringen köras innan nya kartkataloger kan skapas.
+
+Test för migreringen: `php tests/content_migration.php` (använder tillfälliga testkataloger).
+
+### Äldre konfiguration (före migrering)
 
 Växla mellan olika innehållskataloger (t.ex. produktion, test, arkiv):
 
