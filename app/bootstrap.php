@@ -70,8 +70,11 @@ function cfg(string $name): array {
   if (!isset($cache[$name])) {
     $path = __DIR__ . '/../config/' . $name . '.php';
     $cache[$name] = file_exists($path) ? require $path : [];
-    if ($name === 'app' && is_file(__DIR__ . '/../config/content.local.json')) {
-      $contentConfig = json_decode((string)file_get_contents(__DIR__ . '/../config/content.local.json'), true, 32, JSON_THROW_ON_ERROR);
+    $contentConfigPath = is_file(__DIR__ . '/../content/.capmap-config.json')
+      ? __DIR__ . '/../content/.capmap-config.json'
+      : __DIR__ . '/../config/content.local.json';
+    if ($name === 'app' && is_file($contentConfigPath)) {
+      $contentConfig = json_decode((string)file_get_contents($contentConfigPath), true, 32, JSON_THROW_ON_ERROR);
       $root = __DIR__ . '/../' . $contentConfig['content_root'];
       $cache[$name]['content_root'] = $root;
       $cache[$name]['content_dirs'] = $contentConfig['content_dirs'];

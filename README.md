@@ -79,7 +79,8 @@ open http://localhost:8080/view/index.php
 
 - Separat alternativ till den klassiska kartan med samma Markdown-innehåll.
 - Färgade skiktrubriker och enkla kort med beskrivning och mognadsetikett.
-- Kartval, filter och statistik är hopfällda från början; klicka på raden för att öppna.
+- Kartväljaren finns alltid i den blå baren bredvid gränssnittsväxlaren och byter karta direkt.
+- Filter och statistik är hopfällda från början; klicka på raden för att öppna.
 - Sök på namn, beskrivning, ID och taggar; filtrera på skikt, område och mognad.
 - Mognadsfärger: röd, gul, blå, grön och lila för nivå 1–5; grå för ej bedömd.
 - Klicka på ett kort för att öppna detaljsidan. Växlaren **Klassisk / Ny vy** behåller vald karta.
@@ -340,9 +341,15 @@ för säkerhetskopiering, rättigheter och återställning.
 
 Öppna **Editor → Flytta innehåll till /content** (`editor/migrate_content.php`).
 Sidan läser katalogerna från konfigurationen och visar exakt vilka sökvägar som
-kommer att flyttas. Kör flytten under ett underhållsfönster, efter säkerhetskopiering
-och utan andra samtidiga användare. PHP behöver skrivrättighet till appens rot,
-`config/`, `storage/` och kartkatalogerna.
+kommer att kopieras. Kör migreringen under ett underhållsfönster, efter
+säkerhetskopiering och utan andra samtidiga användare. PHP behöver endast
+läsrättighet till källfilerna och skrivrättighet inne i källkatalogerna och
+**`/content`** för att städa originalen efter kopieringen. Varken
+root-användare eller skrivbar applikationsrot, `config/` eller `storage/` krävs
+för migreringen och skapandet av kartkataloger. `/content` måste finnas i förväg
+och ha plats för en extra kopia av alla kartor. I OpenShift kan den ligga på en
+skrivbar persistent volym; de gamla källfilerna måste fortfarande vara synliga
+för PHP när migreringen körs.
 
 Exempel efter migrering:
 
@@ -353,18 +360,34 @@ content/
 ```
 
 Koden använder de gamla sökvägarna tills du trycker på migreringsknappen.
-Verktyget hanterar flytten av `/content` via en tillfällig katalog, kontrollerar
-kollisioner och aktiverar den nya konfigurationen sist. Vanliga fel återställer
-flyttarna. Om PHP-processen avbryts måste administratören återställa manuellt med
-hjälp av `storage/content-migration-*/plan.json` eller säkerhetskopian.
+Verktyget kopierar via en arbetskatalog under `/content`, kontrollerar kollisioner
+och SHA-256-kontrollsummor och aktiverar den nya konfigurationen sist.
+Efter aktiveringen verifieras originalfilerna igen mot kopiorna och tas bort.
+Tomma ursprungliga undermappar städas också, men **källornas rotkataloger tas
+aldrig bort och byter aldrig namn**. Därmed kan exempelvis `/content2` vara en
+monterad persistent volym som lämnas tom. `/content` behålls som innehållsrot
+med de nya kartorna och konfigurationen. Filer som ändrats eller inte kan tas
+bort lämnas kvar och redovisas som varningar; de nya kartorna förblir aktiva.
 
-Efter flytten används **`config/content.local.json`** i stället för `content_dirs`
+Vid fel före aktiveringen tas de nya kopiorna bort och originalen behålls.
+Om PHP-processen avbryts: kontrollera `/content/.capmap-migration/plan.json`.
+Finns `content/.capmap-config.json` är de nya kartorna redan aktiva och får
+inte tas bort; kontrollera då återstående original manuellt. Annars kan
+ofullständiga kopior tas bort enligt journalen före ett nytt försök, medan
+originalen behålls. Namn som börjar med `.capmap-` under innehållsroten är reserverade för
+verktygets konfiguration, lås och journaler.
+
+Efter migreringen används **`content/.capmap-config.json`** i stället för `content_dirs`
 i `config/app.php`. Filen är lokal och ignoreras av Git; säkerhetskopiera den ihop
 med innehållet. Den innehåller `content_root` relativt applikationsroten och
 `content_dirs` med `folder`, `label` och `description` per karta. Alla vyer,
 editorn, import/export, AI och MCP får sökvägar via samma konfigurationsfunktioner.
 Nya kartkataloger skapas i editorn under innehållsroten. På äldre installationer
 måste migreringen köras innan nya kartkataloger kan skapas.
+
+Äldre installationer som redan använder `config/content.local.json` fungerar
+fortfarande. Vid nästa skapande av en kartkatalog sparas konfigurationen under
+`/content`; filen där har företräde framför den äldre konfigurationsfilen.
 
 Test för migreringen: `php tests/content_migration.php` (använder tillfälliga testkataloger).
 

@@ -4,7 +4,7 @@ return [
   'base_path' => '', // e.g. '/capapp' if hosted in a subfolder
   'content_dir' => __DIR__ . '/../content', // deprecated, use content_dirs
   // Legacy paths below remain active until editor/migrate_content.php is run.
-  // The migration writes config/content.local.json with a common content_root
+  // The migration writes content/.capmap-config.json with a common content_root
   // and per-map folder names. That local configuration then takes precedence.
   'storage_dir' => __DIR__ . '/../storage',
   'default_mode' => 'view', // view | editor

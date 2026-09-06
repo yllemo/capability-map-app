@@ -28,6 +28,7 @@ config/.env.*
 config/auth.local.php
 config/app.local.php
 config/content.local.json
+content/.capmap-*
 config/auth.php
 config/ai.local.php
 

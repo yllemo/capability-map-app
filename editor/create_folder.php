@@ -41,9 +41,9 @@ $created = false;
 try {
   $root = get_content_root();
   if ($root === null) throw new RuntimeException('Kör först Flytta innehåll till /content i editorn.');
-  $lock = fopen(__DIR__ . '/../storage/content-migration.lock', 'c');
+  $lock = fopen(__DIR__ . '/../content/.capmap-migration.lock', 'c');
   if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) throw new RuntimeException('En annan katalogändring pågår. Försök igen.');
-  $configPath = __DIR__ . '/../config/content.local.json';
+  $configPath = App\ContentMigration::configPath(dirname(__DIR__));
   $config = json_decode((string)file_get_contents($configPath), true, 32, JSON_THROW_ON_ERROR);
   if (isset($config['content_dirs'][$key])) throw new RuntimeException('Folder-nyckeln används redan.');
   $newDirPath = rtrim($root, '/\\') . '/' . $key;

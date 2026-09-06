@@ -44,17 +44,17 @@ $layerChrome = [
   <div class="brand"><span class="brand-symbol" aria-hidden="true">▦</span><div><strong>Förmågekarta</strong><span>Verksamhetens förmågor, samlade</span></div></div>
   <nav aria-label="Vyer och verktyg">
     <?php require __DIR__ . '/../app/templates/interface_toggle.php'; ?>
+    <form action="<?= h(base_path('view/overview.php')) ?>" method="get" class="map-picker header-map-picker"><label for="map-select">Välj karta</label><div><select id="map-select" name="map"><?php foreach ($dirs as $key => $dir): ?><option value="<?= h($key) ?>" <?= $key === $selectedKey ? 'selected' : '' ?>><?= h($dir['label'] ?? $key) ?></option><?php endforeach; ?></select><button type="submit">Visa</button></div></form>
     <a href="<?= h(base_path('editor/index.php' . $mapQuery)) ?>">Editor</a>
     <button type="button" data-theme-toggle aria-label="Växla ljust och mörkt tema" title="Växla tema">◐</button>
   </nav>
 </header>
 <main>
   <details class="overview-controls">
-    <summary><span><?= h($dirs[$selectedKey]['label'] ?? 'Förmågekarta') ?></span><span class="controls-label">Kartval, filter och statistik <span aria-hidden="true">⌄</span></span></summary>
+    <summary><span><?= h($dirs[$selectedKey]['label'] ?? 'Förmågekarta') ?></span><span class="controls-label">Filter och statistik <span aria-hidden="true">⌄</span></span></summary>
     <div class="controls-content">
   <section class="intro" aria-labelledby="page-title">
     <div><p class="eyebrow">ÖVERSIKTSVY <span>NY VY</span></p><h1 id="page-title"><?= h($dirs[$selectedKey]['label'] ?? 'Förmågekarta') ?></h1><p>Från styrning till genomförande. Utforska förmågor och deras mognad.</p></div>
-    <form method="get" class="map-picker"><label for="map-select">Välj karta</label><div><select id="map-select" name="map"><?php foreach ($dirs as $key => $dir): ?><option value="<?= h($key) ?>" <?= $key === $selectedKey ? 'selected' : '' ?>><?= h($dir['label'] ?? $key) ?></option><?php endforeach; ?></select><button type="submit">Visa</button></div></form>
   </section>
   <section class="stats" aria-label="Sammanfattning för hela kartan">
     <div><strong><?= count($caps) ?></strong><span>Förmågor totalt</span></div>

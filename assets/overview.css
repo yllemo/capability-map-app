@@ -58,3 +58,12 @@ main { max-width: none; padding: 16px 24px 24px; }
   .overview-controls, .map-caption { display: none; }
   .layer-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* Keep map selection accessible while the filter panel is collapsed. */
+.site-header { flex-wrap: wrap; }
+.site-header nav { flex-wrap: wrap; }
+.site-header .header-map-picker { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; max-width: 100%; }
+.site-header .header-map-picker label { color: #d6e8f6; font-size: 12px; white-space: nowrap; }
+.site-header .header-map-picker > div { margin: 0; min-width: 0; }
+.site-header .header-map-picker select { width: auto; max-width: min(260px, 55vw); padding: 7px 10px; font-size: 12px; border-color: #ffffff60; }
+.site-header .header-map-picker button { padding: 7px 10px; }

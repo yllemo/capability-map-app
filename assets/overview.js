@@ -1,4 +1,9 @@
 (() => {
+  const mapSelect = document.querySelector('#map-select');
+  if (mapSelect) {
+    mapSelect.addEventListener('change', () => mapSelect.form.requestSubmit());
+    mapSelect.form.querySelector('button[type="submit"]').hidden = true;
+  }
   const search = document.querySelector('#overview-search');
   const area = document.querySelector('#area-filter');
   const maturity = document.querySelector('#maturity-filter');
