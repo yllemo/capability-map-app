@@ -1,0 +1,1226 @@
+
+
+<!DOCTYPE html>
+<html lang="sv" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Förmågekarta — Göteborgs Stad</title>
+<style>
+  :root {
+    --gs-blue: #0077bc; --gs-blue-dark: #005f96; --gs-blue-deeper: #004a78;
+    --bg-color: #FFFFFE; --bg-footer: #F5F5F5; --bg-nav: #F4F9FC;
+    --bg-info: #F2F9F9; --bg-card: #ffffff; --bg-layer: #f7fafc;
+    --text-color: #333333; --text-secondary: #6E6E6E;
+    --link-color: #005799; --border-color: #d1d9dc; --border-strong: #979797;
+    --c-turquoise: #008391; --c-green: #5a8b3b; --c-yellow: #f2a900;
+    --c-red: #d24723; --c-darkblue: #3f5564; --c-purple: #674b99; --c-lightgray: #d1d9dc;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08); --shadow-md: 0 4px 12px rgba(0,0,0,.10);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,.12); --radius: 4px; --radius-lg: 8px;
+  }
+  [data-theme="dark"] {
+    --bg-color: #1F1F1F; --bg-footer: #121212; --bg-nav: #141414;
+    --bg-info: #282828; --bg-card: #2a2a2a; --bg-layer: #252525;
+    --text-color: #FFFFFF; --text-secondary: #E3E8E9;
+    --link-color: #479EF5; --border-color: #444444; --border-strong: #666666;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.3); --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,.5);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Goteborg',Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:var(--text-color);background:var(--bg-color);min-height:100vh;transition:background .2s,color .2s}
+  /* HEADER */
+  .site-header{background:var(--gs-blue);color:#fff;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-md)}
+  .site-header__left{display:flex;align-items:center;gap:1rem}
+  .gs-wordmark{font-size:.85rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;opacity:.9;white-space:nowrap}
+  .header-divider{width:1px;height:28px;background:rgba(255,255,255,.3)}
+  .app-title{font-size:1.05rem;font-weight:600;color:#fff}
+  .header-actions{display:flex;align-items:center;gap:.5rem}
+  .btn-icon{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;width:36px;height:36px;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:background .15s}
+  .btn-icon:hover{background:rgba(255,255,255,.25)}
+  /* TOOLBAR */
+  .toolbar{background:var(--bg-nav);border-bottom:1px solid var(--border-color);padding:.75rem 2rem;display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
+  .search-wrap{position:relative;flex:1;min-width:200px;max-width:380px}
+  .search-wrap svg{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--text-secondary);pointer-events:none}
+  .search-input{width:100%;padding:.5rem .75rem .5rem 2.25rem;border:1px solid var(--border-color);border-radius:var(--radius);background:var(--bg-card);color:var(--text-color);font-size:.9rem;font-family:inherit;transition:border-color .15s}
+  .search-input:focus{outline:none;border-color:var(--gs-blue)}
+  .filter-group{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center}
+  .filter-label{font-size:.78rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-right:.15rem}
+  .chip{padding:.3rem .75rem;border-radius:20px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+  .chip:hover{border-color:var(--gs-blue);color:var(--gs-blue)}
+  .chip.active{background:var(--gs-blue);border-color:var(--gs-blue);color:#fff}
+  .toolbar-spacer{flex:1}
+  .btn{padding:.5rem 1rem;border-radius:var(--radius);border:none;cursor:pointer;font-size:.85rem;font-weight:600;font-family:inherit;display:inline-flex;align-items:center;gap:.4rem;transition:all .15s;white-space:nowrap}
+  .btn-primary{background:var(--gs-blue);color:#fff}
+  .btn-primary:hover{background:var(--gs-blue-dark)}
+  .btn-secondary{background:var(--bg-card);color:var(--text-color);border:1px solid var(--border-color)}
+  .btn-secondary:hover{border-color:var(--gs-blue);color:var(--gs-blue)}
+  .btn-ghost{background:transparent;color:var(--text-secondary);border:1px solid transparent}
+  .btn-ghost:hover{color:var(--gs-blue);border-color:var(--border-color)}
+  /* META BAR */
+  .meta-bar{padding:.6rem 2rem;background:var(--bg-info);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+  .meta-bar__org{font-weight:700;color:var(--text-color);font-size:.95rem;cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .15s;padding-bottom:1px}
+  .meta-bar__org:hover{border-bottom-color:var(--gs-blue);color:var(--gs-blue)}
+  .meta-bar__org-input{font-weight:700;font-size:.95rem;font-family:inherit;color:var(--text-color);background:transparent;border:none;border-bottom:2px solid var(--gs-blue);outline:none;padding:0 0 1px;min-width:180px;width:auto}
+  .meta-bar__desc-wrap{flex:1;text-align:center;min-width:0;padding:0 1rem}
+  .meta-bar__desc{display:inline-block;max-width:100%;font-weight:400;font-size:.85rem;color:var(--text-secondary);cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .15s,color .15s;padding-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+  .meta-bar__desc:hover{border-bottom-color:var(--gs-blue);color:var(--gs-blue)}
+  .meta-bar__desc.placeholder{font-style:italic;opacity:.65}
+  .meta-bar__desc-input{font-weight:400;font-size:.85rem;font-family:inherit;color:var(--text-color);background:transparent;border:none;border-bottom:2px solid var(--gs-blue);outline:none;padding:0 0 1px;width:min(440px,60vw);text-align:center}
+  .meta-bar__stats{font-size:.82rem;color:var(--text-secondary);display:flex;gap:1.25rem}
+  .stat{display:flex;align-items:center;gap:.35rem}
+  .stat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  /* MAIN */
+  main{padding:2rem;max-width:1600px;margin:0 auto}
+  /* LAYER */
+  .layer{margin-bottom:2.5rem}
+  .layer-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem}
+  .layer-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .9rem;border-radius:20px;font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  .layer-badge.direction{background:rgba(103,75,153,.12);color:#674b99;border:1px solid rgba(103,75,153,.25)}
+  [data-theme="dark"] .layer-badge.direction{background:rgba(103,75,153,.2);color:#c4adf0;border-color:rgba(103,75,153,.4)}
+  .layer-badge.core{background:rgba(0,119,188,.1);color:var(--gs-blue);border:1px solid rgba(0,119,188,.25)}
+  .layer-badge.support{background:rgba(90,139,59,.1);color:#5a8b3b;border:1px solid rgba(90,139,59,.25)}
+  [data-theme="dark"] .layer-badge.support{background:rgba(90,139,59,.2);color:#9dcc74;border-color:rgba(90,139,59,.4)}
+  .layer-count{font-size:.8rem;color:var(--text-secondary);font-weight:600}
+  .layer-line{flex:1;height:1px;background:var(--border-color)}
+  .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
+  /* CARD */
+  .cap-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.1rem 1.1rem 1rem;box-shadow:var(--shadow-sm);transition:box-shadow .2s,transform .2s,border-color .2s;display:flex;flex-direction:column;gap:.6rem;cursor:default;position:relative;overflow:hidden}
+  .cap-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:var(--radius-lg) 0 0 var(--radius-lg)}
+  .cap-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);border-color:var(--gs-blue)}
+  .cap-card[data-status="initial"]::before{background:var(--c-red)}
+  .cap-card[data-status="developing"]::before{background:var(--c-yellow)}
+  .cap-card[data-status="defined"]::before{background:var(--gs-blue)}
+  .cap-card[data-status="managed"]::before{background:var(--c-green)}
+  .cap-card[data-status="optimized"]::before{background:var(--c-purple)}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem}
+  .card-title{font-size:.95rem;font-weight:700;color:var(--text-color);line-height:1.3}
+  .status-badge{flex-shrink:0;padding:.15rem .45rem;border-radius:20px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+  .sb-initial{background:rgba(210,71,35,.1);color:#d24723;border:1px solid rgba(210,71,35,.25)}
+  .sb-developing{background:rgba(242,169,0,.12);color:#a06e00;border:1px solid rgba(242,169,0,.3)}
+  .sb-defined{background:rgba(0,119,188,.1);color:var(--gs-blue);border:1px solid rgba(0,119,188,.25)}
+  .sb-managed{background:rgba(90,139,59,.1);color:#5a8b3b;border:1px solid rgba(90,139,59,.25)}
+  .sb-optimized{background:rgba(103,75,153,.1);color:#674b99;border:1px solid rgba(103,75,153,.25)}
+  [data-theme="dark"] .sb-developing{color:#f2c84b}
+  [data-theme="dark"] .sb-managed{color:#9dcc74}
+  [data-theme="dark"] .sb-optimized{color:#c4adf0}
+  .card-desc{font-size:.85rem;color:var(--text-secondary);line-height:1.5;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .card-actions{display:flex;gap:.25rem;opacity:0;transition:opacity .15s;flex-shrink:0}
+  .cap-card:hover .card-actions{opacity:1}
+  .card-btn{background:none;border:1px solid transparent;color:var(--text-secondary);cursor:pointer;width:28px;height:28px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:.9rem;transition:all .15s;padding:0}
+  .card-btn:hover{background:var(--bg-nav);border-color:var(--border-color);color:var(--text-color)}
+  .card-btn.delete:hover{background:rgba(210,71,35,.1);border-color:rgba(210,71,35,.3);color:#d24723}
+  .card-link{position:absolute;right:.65rem;bottom:.55rem;width:26px;height:26px;border-radius:var(--radius);border:1px solid transparent;background:none;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:0;transition:opacity .15s,background .15s,color .15s,border-color .15s}
+  .cap-card:hover .card-link{opacity:1}
+  .card-link:hover{background:var(--bg-nav);border-color:var(--border-color);color:var(--gs-blue)}
+  /* FORM */
+  .form-group{margin-bottom:1rem}
+  .form-label{display:block;font-size:.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em}
+  .form-input,.form-textarea,.form-select{width:100%;padding:.6rem .75rem;border:1px solid var(--border-color);border-radius:var(--radius);background:var(--bg-color);color:var(--text-color);font-size:.9rem;font-family:inherit;transition:border-color .15s}
+  .form-input:focus,.form-textarea:focus,.form-select:focus{outline:none;border-color:var(--gs-blue);box-shadow:0 0 0 3px rgba(0,119,188,.1)}
+  .form-textarea{resize:vertical;min-height:90px}
+  .form-select option{background:var(--bg-card)}
+  .btn-danger-soft{background:rgba(210,71,35,.08);color:#d24723;border:1px solid rgba(210,71,35,.2)}
+  .btn-danger-soft:hover{background:rgba(210,71,35,.15);border-color:rgba(210,71,35,.4)}
+  .title-hint{font-size:.75rem;color:var(--text-secondary);margin-top:.3rem;line-height:1.4;min-height:1.1em}
+  /* EMPTY */
+  .empty-layer{grid-column:1/-1;text-align:center;padding:2.5rem;color:var(--text-secondary);font-size:.9rem;border:1px dashed var(--border-color);border-radius:var(--radius-lg)}
+  /* DROP OVERLAY */
+  .drop-overlay{display:none;position:fixed;inset:0;background:rgba(0,119,188,.15);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center}
+  .drop-overlay.active{display:flex}
+  .drop-box{background:var(--bg-card);border:2px dashed var(--gs-blue);border-radius:12px;padding:3rem 4rem;text-align:center;box-shadow:var(--shadow-lg)}
+  .drop-box p{font-size:1.2rem;font-weight:600;color:var(--gs-blue);margin-top:.75rem}
+  .drop-icon{font-size:3rem}
+  /* MODAL */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
+  .modal-bg.active{display:flex}
+  .modal{background:var(--bg-card);border-radius:var(--radius-lg);padding:2rem;width:min(520px,94vw);max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+  .modal h2{font-size:1.1rem;font-weight:700;color:var(--text-color);margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem}
+  .modal p{font-size:.9rem;color:var(--text-secondary);margin-bottom:.75rem;line-height:1.6}
+  .edit-grid{display:grid;grid-template-columns:1fr 290px;gap:1.5rem;align-items:start}
+  .edit-fields{min-width:0}
+  .edit-comments{min-width:0;border-left:1px solid var(--border-color);padding-left:1.25rem}
+  .edit-comments__label{font-size:.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:.4rem}
+  .comment-list{display:flex;flex-direction:column;gap:.55rem;max-height:240px;overflow-y:auto;margin-bottom:.85rem}
+  .comment-empty{font-size:.8rem;color:var(--text-secondary);font-style:italic;opacity:.7;padding:.35rem 0}
+  .comment{background:var(--bg-nav);border:1px solid var(--border-color);border-radius:var(--radius);padding:.5rem .6rem}
+  .comment__meta{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;margin-bottom:.2rem}
+  .comment__author{font-size:.8rem;font-weight:700;color:var(--text-color);word-break:break-word}
+  .comment__time{font-size:.68rem;color:var(--text-secondary);white-space:nowrap}
+  .comment__text{font-size:.8rem;color:var(--text-secondary);line-height:1.45;white-space:pre-wrap;word-break:break-word}
+  .comment__del{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:.8rem;line-height:1;padding:0 .15rem;opacity:.55;transition:opacity .15s,color .15s}
+  .comment__del:hover{opacity:1;color:#d24723}
+  .comment-add{display:flex;flex-direction:column;gap:.45rem}
+  .comment-add input,.comment-add textarea{width:100%;padding:.45rem .6rem;border:1px solid var(--border-color);border-radius:var(--radius);background:var(--bg-color);color:var(--text-color);font-size:.82rem;font-family:inherit}
+  .comment-add textarea{resize:vertical;min-height:54px}
+  .comment-add input:focus,.comment-add textarea:focus{outline:none;border-color:var(--gs-blue);box-shadow:0 0 0 3px rgba(0,119,188,.1)}
+  @media(max-width:680px){.edit-grid{grid-template-columns:1fr}.edit-comments{border-left:none;border-top:1px solid var(--border-color);padding-left:0;padding-top:1.25rem}}
+  .modal-actions{display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.5rem}
+  /* IMPORT TABS */
+  .import-tabs{display:flex;gap:0;margin-bottom:1.25rem;border-bottom:2px solid var(--border-color)}
+  .import-tab{padding:.5rem 1.1rem;font-size:.88rem;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text-secondary);font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s}
+  .import-tab.active{color:var(--gs-blue);border-bottom-color:var(--gs-blue)}
+  .import-tab:hover:not(.active){color:var(--text-color)}
+  .import-pane{display:none}
+  .import-pane.active{display:block}
+  .json-paste-area{width:100%;min-height:180px;padding:.75rem;border:1px solid var(--border-color);border-radius:var(--radius);background:var(--bg-color);color:var(--text-color);font-size:.8rem;font-family:'Courier New',monospace;resize:vertical;transition:border-color .15s;line-height:1.5}
+  .json-paste-area:focus{outline:none;border-color:var(--gs-blue);box-shadow:0 0 0 3px rgba(0,119,188,.1)}
+  .json-paste-area.error{border-color:var(--c-red)}
+  .paste-error{color:var(--c-red);font-size:.8rem;margin-top:.35rem;display:none}
+  .paste-error.visible{display:block}
+  /* HELP */
+  .help-section{margin-bottom:1.4rem}
+  .help-section h3{font-size:.92rem;font-weight:700;color:var(--text-color);margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem}
+  .help-section p{font-size:.87rem;color:var(--text-secondary);margin-bottom:.5rem;line-height:1.6}
+  .help-example{background:var(--bg-nav);border:1px solid var(--border-color);border-radius:var(--radius);padding:.55rem .85rem;font-size:.83rem;margin-bottom:.3rem}
+  .help-example .good{color:var(--c-green);font-weight:700;margin-right:.3rem}
+  .help-example .bad{color:var(--c-red);font-weight:700;margin-right:.3rem}
+  .help-rule{display:flex;align-items:flex-start;gap:.45rem;font-size:.85rem;color:var(--text-secondary);margin-bottom:.35rem}
+  .help-rule-icon{flex-shrink:0;font-size:.9rem;margin-top:.05rem}
+  .help-divider{border:none;border-top:1px solid var(--border-color);margin:1.1rem 0}
+  .code-block{background:var(--bg-nav);border:1px solid var(--border-color);border-radius:var(--radius);padding:.75rem;font-family:'Courier New',monospace;font-size:.75rem;color:var(--text-color);white-space:pre;overflow-x:auto;margin-top:.35rem}
+  .layer-info{margin:.55rem 0;border:1px solid var(--border-color);border-left:4px solid var(--gs-blue);border-radius:var(--radius);padding:.6rem .85rem;background:var(--bg-nav)}
+  .layer-info__head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.1rem}
+  .layer-info__title{font-size:.88rem;font-weight:700;color:var(--text-color)}
+  .layer-info__pct{flex-shrink:0;font-size:.72rem;font-weight:700;color:var(--text-secondary);background:var(--bg-card);border:1px solid var(--border-color);border-radius:20px;padding:.12rem .6rem;white-space:nowrap}
+  .layer-info__sub{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:.25rem}
+  .layer-info__body{font-size:.83rem;color:var(--text-secondary);line-height:1.5}
+  .help-warn{margin-top:.85rem;border:1px solid rgba(242,169,0,.4);background:rgba(242,169,0,.08);border-radius:var(--radius);padding:.75rem .9rem}
+  .help-warn__title{font-size:.86rem;font-weight:700;color:#a06e00;margin-bottom:.4rem}
+  [data-theme="dark"] .help-warn__title{color:#f2c84b}
+  .help-warn p{font-size:.83rem;color:var(--text-secondary);margin-bottom:.35rem;line-height:1.55}
+  .help-warn ul{margin:.3rem 0 .45rem 1.15rem;padding:0}
+  .help-warn li{font-size:.83rem;color:var(--text-secondary);line-height:1.55;margin-bottom:.2rem}
+  .help-warn__fix{font-size:.83rem;color:var(--text-color);line-height:1.55}
+  .mat-level{display:flex;gap:.7rem;margin:.5rem 0;border:1px solid var(--border-color);border-radius:var(--radius);padding:.6rem .8rem;background:var(--bg-nav)}
+  .mat-level__num{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#fff}
+  .mat-level__body{flex:1;min-width:0}
+  .mat-level__head{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;margin-bottom:.2rem}
+  .mat-level__name{font-size:.88rem;font-weight:700;color:var(--text-color)}
+  .mat-level__def{font-size:.76rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary)}
+  .mat-level__desc{font-size:.83rem;color:var(--text-secondary);line-height:1.5;margin-bottom:.3rem}
+  .mat-level__ex{font-size:.82rem;color:var(--text-color);line-height:1.5;border-left:2px solid var(--border-color);padding-left:.6rem}
+  .help-tip{margin-top:.85rem;border:1px solid rgba(0,119,188,.35);background:rgba(0,119,188,.07);border-radius:var(--radius);padding:.7rem .9rem;font-size:.83rem;color:var(--text-secondary);line-height:1.55}
+  .help-tip strong{color:var(--text-color)}
+  /* TOAST */
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:.6rem 1.25rem;border-radius:20px;font-size:.85rem;font-weight:600;box-shadow:var(--shadow-lg);z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+  .toast.show{opacity:1}
+  /* LEGEND */
+  .legend{display:flex;gap:1rem;flex-wrap:wrap;padding:.75rem 2rem;background:var(--bg-footer);border-top:1px solid var(--border-color);font-size:.78rem;color:var(--text-secondary)}
+  .legend-item{display:flex;align-items:center;gap:.4rem}
+  .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+  /* FOOTER */
+  footer{background:var(--bg-footer);border-top:1px solid var(--border-color);padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem}
+  .footer-left{font-size:.8rem;color:var(--text-secondary)}
+  .footer-right{font-size:.8rem;color:var(--text-secondary);display:flex;gap:1rem}
+  /* STATUS CHIPS */
+  .chip-initial{border-color:rgba(210,71,35,.35)!important;color:#d24723!important}
+  .chip-developing{border-color:rgba(242,169,0,.4)!important;color:#a06e00!important}
+  .chip-defined{border-color:rgba(0,119,188,.35)!important;color:var(--gs-blue)!important}
+  .chip-managed{border-color:rgba(90,139,59,.35)!important;color:#5a8b3b!important}
+  .chip-optimized{border-color:rgba(103,75,153,.35)!important;color:#674b99!important}
+  .chip-initial.active{background:#d24723!important;border-color:#d24723!important;color:#fff!important}
+  .chip-developing.active{background:#a06e00!important;border-color:#a06e00!important;color:#fff!important}
+  .chip-defined.active{background:var(--gs-blue)!important;border-color:var(--gs-blue)!important;color:#fff!important}
+  .chip-managed.active{background:#5a8b3b!important;border-color:#5a8b3b!important;color:#fff!important}
+  .chip-optimized.active{background:#674b99!important;border-color:#674b99!important;color:#fff!important}
+  [data-theme="dark"] .chip-developing{color:#f2c84b!important;border-color:rgba(242,169,0,.4)!important}
+  [data-theme="dark"] .chip-managed{color:#9dcc74!important;border-color:rgba(90,139,59,.4)!important}
+  [data-theme="dark"] .chip-optimized{color:#c4adf0!important;border-color:rgba(103,75,153,.4)!important}
+  [data-theme="dark"] .chip-developing.active{background:#7a5500!important;border-color:#7a5500!important;color:#f2c84b!important}
+  [data-theme="dark"] .chip-managed.active{background:#3a6025!important;border-color:#3a6025!important;color:#9dcc74!important}
+  [data-theme="dark"] .chip-optimized.active{background:#42306a!important;border-color:#42306a!important;color:#c4adf0!important}
+  /* EXPORT HIDE */
+  body.exporting .toolbar,body.exporting .meta-bar,body.exporting .site-header .header-actions,body.exporting .card-actions{visibility:hidden}
+  @media(max-width:640px){.toolbar{padding:.75rem 1rem}main{padding:1rem}.meta-bar{padding:.6rem 1rem}.legend{padding:.75rem 1rem}footer{padding:1rem}.search-wrap{max-width:100%}.toolbar-spacer{display:none}.site-header{padding:0 1rem}}
+</style>
+</head>
+<body>
+
+<header class="site-header" id="siteHeader">
+  <div class="site-header__left">
+    <span class="gs-wordmark">Göteborgs Stad</span>
+    <div class="header-divider"></div>
+    <span class="app-title">Förmågekarta</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-icon" onclick="openImport()" title="Importera JSON">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </button>
+    <div style="position:relative" id="exportMenuWrap">
+      <button class="btn-icon" onclick="toggleExportMenu()" title="Exportera" id="exportMenuBtn" style="gap:.35rem;padding:0 .75rem;width:auto">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span style="font-size:.8rem;font-weight:600">Exportera</span>
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="exportMenu" style="display:none;position:absolute;top:calc(100% + .4rem);right:0;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);min-width:205px;z-index:400;overflow:hidden">
+        <button onclick="exportJSON();toggleExportMenu()" onmouseover="this.style.background='var(--bg-nav)'" onmouseout="this.style.background='none'" style="width:100%;text-align:left;padding:.65rem 1rem;border:none;background:none;color:var(--text-color);font-size:.88rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.65rem;border-bottom:1px solid var(--border-color)">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Exportera JSON
+        </button>
+        <button onclick="exportShareLink();toggleExportMenu()" onmouseover="this.style.background='var(--bg-nav)'" onmouseout="this.style.background='none'" style="width:100%;text-align:left;padding:.65rem 1rem;border:none;background:none;color:var(--text-color);font-size:.88rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.65rem;border-bottom:1px solid var(--border-color)">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          Kopiera delningslänk
+        </button>
+        <button onclick="exportMarkdown();toggleExportMenu()" onmouseover="this.style.background='var(--bg-nav)'" onmouseout="this.style.background='none'" style="width:100%;text-align:left;padding:.65rem 1rem;border:none;background:none;color:var(--text-color);font-size:.88rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.65rem;border-bottom:1px solid var(--border-color)">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h4l-4 4V8l4 4"/><path d="M16 8v8"/></svg>
+          Exportera Markdown
+        </button>
+        <button onclick="exportPNG();toggleExportMenu()" onmouseover="this.style.background='var(--bg-nav)'" onmouseout="this.style.background='none'" style="width:100%;text-align:left;padding:.65rem 1rem;border:none;background:none;color:var(--text-color);font-size:.88rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.65rem">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Exportera PNG
+        </button>
+      </div>
+    </div>
+    <button class="btn-icon" onclick="openHelp()" title="Hjälp" style="font-size:.9rem;font-weight:700;letter-spacing:0">?</button>
+    <button class="btn-icon" onclick="toggleTheme()" title="Växla tema" id="themeBtn">🌙</button>
+  </div>
+</header>
+
+<div class="toolbar" id="toolbar">
+  <div class="search-wrap">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" type="search" placeholder="Sök förmåga…" id="searchInput" oninput="applyFilters()">
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Skikt</span>
+    <button class="chip active" data-layer="all" onclick="setLayerFilter(this)">Alla</button>
+    <button class="chip" data-layer="strategic" onclick="setLayerFilter(this)">Strategiskt</button>
+    <button class="chip" data-layer="core" onclick="setLayerFilter(this)">Värdeskapande</button>
+    <button class="chip" data-layer="support" onclick="setLayerFilter(this)">Stödjande</button>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Mognad</span>
+    <button class="chip active" data-status="all" onclick="setStatusFilter(this)">Alla</button>
+    <button class="chip chip-initial" data-status="initial" onclick="setStatusFilter(this)">Initial</button>
+    <button class="chip chip-developing" data-status="developing" onclick="setStatusFilter(this)">Utveckling</button>
+    <button class="chip chip-defined" data-status="defined" onclick="setStatusFilter(this)">Definierad</button>
+    <button class="chip chip-managed" data-status="managed" onclick="setStatusFilter(this)">Hanterad</button>
+    <button class="chip chip-optimized" data-status="optimized" onclick="setStatusFilter(this)">Optimerad</button>
+  </div>
+  <div class="toolbar-spacer"></div>
+  <button class="btn btn-secondary" onclick="openImport()">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Importera
+  </button>
+  <button class="btn btn-primary" onclick="openAddModal()">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Ny förmåga
+  </button>
+</div>
+
+<div class="meta-bar" id="metaBar">
+  <span class="meta-bar__org" id="orgName" onclick="startEditOrg()" title="Klicka för att redigera">—</span>
+  <input class="meta-bar__org-input" id="orgInput" type="text" style="display:none"
+    onblur="commitEditOrg()" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){cancelEditOrg()}">
+  <div class="meta-bar__desc-wrap">
+    <span class="meta-bar__desc placeholder" id="mapDesc" onclick="startEditDesc()" title="Klicka för att redigera beskrivning">Lägg till beskrivning…</span>
+    <input class="meta-bar__desc-input" id="mapDescInput" type="text" style="display:none" placeholder="Beskrivning av kartan…"
+      onblur="commitEditDesc()" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){cancelEditDesc()}">
+  </div>
+  <div class="meta-bar__stats" id="statsBar"></div>
+</div>
+
+<main id="mapMain">
+  <div id="emptyWelcome" style="text-align:center;padding:5rem 2rem;color:var(--text-secondary)">
+    <div style="font-size:3rem;margin-bottom:1rem">📊</div>
+    <h2 style="font-size:1.3rem;font-weight:700;color:var(--text-color);margin-bottom:.5rem">Ingen karta inläst</h2>
+    <p style="margin-bottom:1.5rem;font-size:.95rem">Importera en JSON-fil, klistra in JSON eller öppna en delningslänk.</p>
+    <button class="btn btn-primary" onclick="openImport()" style="margin:0 auto">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Importera / Klistra in JSON
+    </button>
+    <p style="margin-top:1.25rem;font-size:.8rem;opacity:.7">Eller dra och släpp en .json-fil var som helst på sidan</p>
+  </div>
+  <div id="layersContainer" style="display:none">
+    <div class="layer" id="layer-strategic">
+      <div class="layer-header">
+        <span class="layer-badge direction">▲ Strategiskt Skikt (Direction)</span>
+        <span class="layer-count" id="count-strategic"></span>
+        <div class="layer-line"></div>
+        <span style="font-size:.78rem;color:var(--text-secondary)">Styrande förmågor</span>
+      </div>
+      <div class="cards-grid" id="grid-strategic"></div>
+    </div>
+    <div class="layer" id="layer-core">
+      <div class="layer-header">
+        <span class="layer-badge core">● Värdeskapande Skikt (Core)</span>
+        <span class="layer-count" id="count-core"></span>
+        <div class="layer-line"></div>
+        <span style="font-size:.78rem;color:var(--text-secondary)">Kärnverksamhet</span>
+      </div>
+      <div class="cards-grid" id="grid-core"></div>
+    </div>
+    <div class="layer" id="layer-support">
+      <div class="layer-header">
+        <span class="layer-badge support">▼ Stödjande Skikt (Enabling)</span>
+        <span class="layer-count" id="count-support"></span>
+        <div class="layer-line"></div>
+        <span style="font-size:.78rem;color:var(--text-secondary)">Möjliggörande förmågor</span>
+      </div>
+      <div class="cards-grid" id="grid-support"></div>
+    </div>
+  </div>
+</main>
+
+<div class="legend">
+  <span style="font-weight:700;color:var(--text-secondary);font-size:.78rem;margin-right:.25rem">MOGNAD</span>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-red)"></div>Initial</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-yellow)"></div>Under utveckling</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--gs-blue)"></div>Definierad</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-green)"></div>Hanterad</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--c-purple)"></div>Optimerad</div>
+</div>
+
+<footer>
+  <span class="footer-left" id="footerDate"></span>
+  <div class="footer-right"><span>Göteborgs Stad — Förmågekarta</span></div>
+</footer>
+
+<!-- DROP OVERLAY -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-box"><div class="drop-icon">📂</div><p>Släpp JSON-filen här</p></div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-bg" id="importModal">
+  <div class="modal">
+    <h2>📂 Importera förmågekarta</h2>
+    <div class="import-tabs">
+      <button class="import-tab active" onclick="switchImportTab('file',this)">📁 Välj fil</button>
+      <button class="import-tab" onclick="switchImportTab('paste',this)">📋 Klistra in JSON</button>
+    </div>
+    <div class="import-pane active" id="pane-file">
+      <p>Välj en JSON-fil exporterad från förmågekarta-verktyget.</p>
+      <p style="font-size:.8rem;background:var(--bg-nav);padding:.75rem;border-radius:var(--radius);border:1px solid var(--border-color)">
+        Förväntad struktur: <code>{ "organization": "...", "description": "...", "capabilities": [{ "id", "title", "description", "url", "status", "layer" }] }</code>
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Avbryt</button>
+        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">Välj fil…</button>
+      </div>
+    </div>
+    <div class="import-pane" id="pane-paste">
+      <p>Klistra in JSON direkt i fältet nedan.</p>
+      <textarea class="json-paste-area" id="jsonPasteArea" placeholder='{
+  "organization": "Intraservice",
+  "capabilities": [
+    {
+      "id": 1,
+      "title": "Lönehantering",
+      "description": "Förmåga att administrera löneutbetalningar",
+      "status": "defined",
+      "layer": "core"
+    }
+  ]
+}'></textarea>
+      <div class="paste-error" id="pasteError">⚠ Ogiltig JSON — kontrollera formatet</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Avbryt</button>
+        <button class="btn btn-primary" onclick="loadFromPaste()">Läs in JSON</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT / ADD MODAL -->
+<div class="modal-bg" id="editModal">
+  <div class="modal" style="width:min(880px,94vw)">
+    <h2 id="editModalTitle">✏️ Redigera förmåga</h2>
+    <div class="edit-grid">
+      <div class="edit-fields">
+        <div class="form-group">
+          <label class="form-label">Titel *</label>
+          <input class="form-input" type="text" id="editTitle" placeholder="t.ex. Lönehantering" required>
+          <div class="title-hint" id="titleHint"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Beskrivning</label>
+          <textarea class="form-textarea" id="editDescription" placeholder="Vad möjliggör denna förmåga för verksamheten?"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Länk (valfritt)</label>
+          <input class="form-input" type="url" id="editUrl" placeholder="https://… (visas som globikon på kortet)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mognad *</label>
+          <select class="form-select" id="editStatus">
+            <option value="initial">Initial — ad hoc, personberoende</option>
+            <option value="developing">Under utveckling — dokumenteras</option>
+            <option value="defined">Definierad — standardiserad process</option>
+            <option value="managed">Hanterad — mäts och styrs</option>
+            <option value="optimized">Optimerad — kontinuerlig förbättring</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Skikt *</label>
+          <select class="form-select" id="editLayer">
+            <option value="strategic">Strategiskt Skikt (Direction)</option>
+            <option value="core">Värdeskapande Skikt (Core)</option>
+            <option value="support">Stödjande Skikt (Enabling)</option>
+          </select>
+        </div>
+      </div>
+      <div class="edit-comments">
+        <div class="edit-comments__label">💬 Kommentarer <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.7">(visas ej på kartan)</span></div>
+        <div class="comment-list" id="commentList"></div>
+        <div class="comment-add">
+          <input type="text" id="commentAuthor" placeholder="Ditt namn">
+          <textarea id="commentText" placeholder="Skriv en kommentar…"></textarea>
+          <button class="btn btn-ghost" style="align-self:flex-start;border:1px solid var(--border-color)" onclick="addComment()">+ Lägg till kommentar</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-danger-soft" id="editDeleteBtn" onclick="deleteFromModal()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        Ta bort
+      </button>
+      <div style="display:flex;gap:.75rem">
+        <button class="btn btn-ghost" onclick="closeEditModal()">Avbryt</button>
+        <button class="btn btn-primary" onclick="saveCapability()">Spara</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HJÄLP MODAL -->
+<div class="modal-bg" id="helpModal">
+  <div class="modal" style="width:min(660px,94vw)">
+    <h2>💡 Hjälp — Förmågekarta</h2>
+    <div class="help-section">
+      <h3>📌 Vad är en förmåga?</h3>
+      <p>En förmåga beskriver <strong>vad</strong> organisationen kan göra — inte hur, inte vem. Det är ett stabilt begrepp som inte förändras med organisation eller teknik.</p>
+    </div>
+    <hr class="help-divider">
+    <div class="help-section">
+      <h3>✍️ Hur skriver man en bra titel?</h3>
+      <div class="help-rule"><span class="help-rule-icon">✅</span><span><strong>Substantivfras</strong> — en förmåga är ett substantiv, inte en aktivitet. Skriv vad organisationen <em>äger</em>, inte vad den <em>gör</em>.</span></div>
+      <div class="help-rule"><span class="help-rule-icon">✅</span><span><strong>Kort och distinkt</strong> — 2–5 ord är idealt. Undvik långa meningar.</span></div>
+      <div class="help-rule"><span class="help-rule-icon">✅</span><span><strong>Verksamhetsspråk</strong> — använd ord verksamheten känner igen, inte IT-jargong.</span></div>
+      <div class="help-rule"><span class="help-rule-icon">✅</span><span><strong>MECE</strong> — förmågor ska vara ömsesidigt uteslutande och kollektivt uttömmande.</span></div>
+      <div class="help-rule"><span class="help-rule-icon">❌</span><span><strong>Undvik verbformer</strong> som "Hantera", "Administrera" — använd substantivformen istället.</span></div>
+      <div style="margin-top:.75rem">
+        <div class="help-example"><span class="good">✓</span> Lönehantering</div>
+        <div class="help-example"><span class="bad">✗</span> Hantera löner (verbform)</div>
+        <div class="help-example"><span class="good">✓</span> Rekryteringsstöd</div>
+        <div class="help-example"><span class="bad">✗</span> Stödja rekryteringsprocessen (process, inte förmåga)</div>
+        <div class="help-example"><span class="good">✓</span> Ekonomisk rapportering</div>
+        <div class="help-example"><span class="bad">✗</span> SAP-rapporter (system, inte förmåga)</div>
+        <div class="help-example"><span class="good">✓</span> Identitets- och behörighetshantering</div>
+        <div class="help-example"><span class="bad">✗</span> AD-administration (teknik, inte förmåga)</div>
+      </div>
+    </div>
+    <hr class="help-divider">
+    <div class="help-section">
+      <h3>🗂 Struktur &amp; visuell modell — tre skikt</h3>
+      <p>Enligt best practice (inklusive Ineras referensarkitektur) bör kartan delas in i tre distinkta skikt (<em>stratification</em>). Det hjälper intressenter att snabbt orientera sig.</p>
+      <div class="layer-info" style="border-left-color:#674b99">
+        <div class="layer-info__head">
+          <span class="layer-info__title" style="color:#674b99">▲ Strategiskt Skikt (Direction)</span>
+          <span class="layer-info__pct">~10–15 %</span>
+        </div>
+        <div class="layer-info__sub">Styrande verksamhet</div>
+        <div class="layer-info__body">Strategi, Arkitektur, Policy, Kvalitet, Säkerhet</div>
+      </div>
+      <div class="layer-info" style="border-left-color:var(--gs-blue)">
+        <div class="layer-info__head">
+          <span class="layer-info__title" style="color:var(--gs-blue)">● Värdeskapande Skikt (Core)</span>
+          <span class="layer-info__pct">~50–60 %</span>
+        </div>
+        <div class="layer-info__sub">Kärnverksamhet</div>
+        <div class="layer-info__body">Det som är organisationens "raison d'être" (ex. Vård, Skola, Tillverkning). Detta är hjärtat i kartan.</div>
+      </div>
+      <div class="layer-info" style="border-left-color:#5a8b3b">
+        <div class="layer-info__head">
+          <span class="layer-info__title" style="color:#5a8b3b">▼ Stödjande Skikt (Enabling)</span>
+          <span class="layer-info__pct">~30–40 %</span>
+        </div>
+        <div class="layer-info__sub">Stödjande verksamhet</div>
+        <div class="layer-info__body">HR, IT, Ekonomi, Fastighet, Juridik</div>
+      </div>
+      <div class="help-warn">
+        <div class="help-warn__title">⚠️ Vanligt fel: oskarp gräns mellan Core och Enabling</div>
+        <p>Är t.ex. "Kompetensutveckling" Core eller Enabling för ett universitet?</p>
+        <ul>
+          <li><strong>Core</strong> om det handlar om att utbilda studenter (kärnuppdraget)</li>
+          <li><strong>Enabling</strong> om det handlar om att utveckla personalens kompetens</li>
+        </ul>
+        <div class="help-warn__fix"><strong>Lösning:</strong> var explicit. "Utbilda studenter" (Core) vs "Utveckla medarbetare" (Enabling).</div>
+      </div>
+    </div>
+    <hr class="help-divider">
+    <div class="help-section">
+      <h3>📈 Mognad — hur väl behärskar vi förmågan?</h3>
+      <p>Mognad beskriver <strong>hur väl etablerad, dokumenterad och styrd</strong> en förmåga är — inte hur viktig den är. Skalan bygger på en CMMI-inspirerad trappa, från ad hoc upp till ständig förbättring. Färgen på kortets vänsterkant följer mognadsnivån.</p>
+      <p style="font-size:.83rem">Exemplen nedan följer <strong>en och samma förmåga — "Lönehantering"</strong> — uppför trappan, så att skillnaden mellan nivåerna blir konkret.</p>
+
+      <div class="mat-level">
+        <div class="mat-level__num" style="background:#d24723">1</div>
+        <div class="mat-level__body">
+          <div class="mat-level__head"><span class="mat-level__name">Initial</span><span class="mat-level__def">Ad hoc &amp; personberoende</span></div>
+          <div class="mat-level__desc">Förmågan utförs, men osystematiskt. Resultatet hänger på enskilda eldsjälar och "tyst kunskap". Ingen gemensam dokumentation, ojämn kvalitet och svårt att skala eller ersätta personer.</div>
+          <div class="mat-level__ex"><strong>Exempel:</strong> En erfaren medarbetare sköter lönerna i egna Excel-ark och "i huvudet". Blir hen sjuk stannar processen.</div>
+        </div>
+      </div>
+
+      <div class="mat-level">
+        <div class="mat-level__num" style="background:#a06e00">2</div>
+        <div class="mat-level__body">
+          <div class="mat-level__head"><span class="mat-level__name">Under utveckling</span><span class="mat-level__def">Dokumenteras &amp; upprepas</span></div>
+          <div class="mat-level__desc">Rutiner börjar skrivas ner och återanvändas, men inte enhetligt. Olika team eller förvaltningar löser samma sak på sina egna sätt.</div>
+          <div class="mat-level__ex"><strong>Exempel:</strong> Lönerutinen finns dokumenterad för en förvaltning, men övriga förvaltningar har egna varianter och checklistor.</div>
+        </div>
+      </div>
+
+      <div class="mat-level">
+        <div class="mat-level__num" style="background:#0077bc">3</div>
+        <div class="mat-level__body">
+          <div class="mat-level__head"><span class="mat-level__name">Definierad</span><span class="mat-level__def">Standardiserad process</span></div>
+          <div class="mat-level__desc">En gemensam, beslutad och dokumenterad process gäller hela organisationen. Roller och ansvar är tydliga, och nya medarbetare kan följa processen utan att "lära sig av en kollega".</div>
+          <div class="mat-level__ex"><strong>Exempel:</strong> En stadenövergripande löneprocess i ett gemensamt system, med fastställda roller, manualer och introduktionsutbildning.</div>
+        </div>
+      </div>
+
+      <div class="mat-level">
+        <div class="mat-level__num" style="background:#5a8b3b">4</div>
+        <div class="mat-level__body">
+          <div class="mat-level__head"><span class="mat-level__name">Hanterad</span><span class="mat-level__def">Mäts &amp; styrs</span></div>
+          <div class="mat-level__desc">Processen mäts med nyckeltal och styrs aktivt utifrån data. Avvikelser upptäcks och åtgärdas, och kvaliteten är förutsägbar. Det finns en utpekad processägare.</div>
+          <div class="mat-level__ex"><strong>Exempel:</strong> Andel korrekta löneutbetalningar, ledtider och felfrekvens mäts varje månad och följs upp systematiskt.</div>
+        </div>
+      </div>
+
+      <div class="mat-level">
+        <div class="mat-level__num" style="background:#674b99">5</div>
+        <div class="mat-level__body">
+          <div class="mat-level__head"><span class="mat-level__name">Optimerad</span><span class="mat-level__def">Kontinuerlig förbättring</span></div>
+          <div class="mat-level__desc">Mätdata används proaktivt för att ständigt förbättra, automatisera och innovera. Förmågan benchmarkas mot andra, och en förbättringskultur är inbyggd i arbetssättet.</div>
+          <div class="mat-level__ex"><strong>Exempel:</strong> Trendanalys driver automatisering (t.ex. robotiserade rimlighetskontroller), och processen jämförs mot andra kommuner för att hitta nästa förbättring.</div>
+        </div>
+      </div>
+
+      <div class="help-tip">💡 <strong>Mognad är inte detsamma som vikt.</strong> En strategiskt kritisk förmåga kan vara omogen (nivå 1–2) — och då är det en <strong>riskfylld glugg</strong> värd att prioritera. Målet är sällan att allt ska vara "Optimerat"; sikta på en mognad som matchar förmågans betydelse. Använd gärna mognadsfärgerna för att snabbt se var de viktigaste förmågorna ligger lågt.</div>
+    </div>
+    <hr class="help-divider">
+    <div class="help-section">
+      <h3>📥 JSON-format</h3>
+      <p>Importera eller klistra in JSON med denna struktur:</p>
+      <div class="code-block">{
+  "organization": "Intraservice",
+  "description": "Förmågekarta för gemensamma tjänster",
+  "capabilities": [
+    {
+      "id": 1,
+      "title": "Lönehantering",
+      "description": "Förmåga att säkerställa korrekta löneutbetalningar",
+      "url": "https://intranat.goteborg.se/lon",
+      "status": "defined",
+      "layer": "core"
+    }
+  ]
+}</div>
+      <p style="margin-top:.65rem"><code>description</code> (kartans beskrivning) och <code>url</code> på förmågor är valfria.</p>
+      <p style="margin-top:.65rem">Giltiga <code>status</code>: <code>initial</code> <code>developing</code> <code>defined</code> <code>managed</code> <code>optimized</code></p>
+      <p>Giltiga <code>layer</code>: <code>strategic</code> <code>core</code> <code>support</code></p>
+    </div>
+    <hr class="help-divider">
+    <div class="help-section">
+      <h3>🔗 Delningslänk</h3>
+      <p>Via <strong>Exportera → Kopiera delningslänk</strong> skapas en URL med hela kartan base64-kodad som <code>?data=…</code>. Dela länken — mottagaren öppnar kartan direkt utan att importera en fil.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeHelp()">Stäng</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<input type="file" id="fileInput" accept=".json" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none">
+
+<script>
+let allCaps = [];
+let org = '';
+let orgDesc = '';
+let activeLayer = 'all';
+let activeStatus = 'all';
+
+const STATUS_LABELS = {
+  initial:'Initial', developing:'Under utveckling',
+  defined:'Definierad', managed:'Hanterad', optimized:'Optimerad',
+};
+const LAYER_MAP = {
+  strategic:'Strategiskt Skikt (Direction)',
+  core:'Värdeskapande Skikt (Core)',
+  support:'Stödjande Skikt (Enabling)',
+};
+const LAYER_ALIASES = {
+  'strategic':'strategic','direction':'strategic','ledning_styrning':'strategic','management':'strategic','styrning':'strategic',
+  'core':'core','karnprocesser':'core','kärnprocesser':'core','värdeskapande':'core',
+  'support':'support','enabling':'support','verksamhetsstod':'support','verksamhetsstöd':'support','stödjande':'support',
+};
+
+function normalizeLayer(raw) {
+  if (!raw) return 'core';
+  return LAYER_ALIASES[String(raw).toLowerCase().trim()] || 'core';
+}
+
+// THEME
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('gs-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+}
+(function initTheme() {
+  const saved = localStorage.getItem('gs-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
+})();
+
+// TOAST
+function showToast(msg, duration) {
+  duration = duration || 2500;
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, duration);
+}
+
+// FILTERS
+function setLayerFilter(btn) {
+  document.querySelectorAll('[data-layer]').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  activeLayer = btn.dataset.layer;
+  applyFilters();
+}
+function setStatusFilter(btn) {
+  document.querySelectorAll('[data-status]').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  activeStatus = btn.dataset.status;
+  applyFilters();
+}
+function applyFilters() {
+  var q = document.getElementById('searchInput').value.toLowerCase();
+  var filtered = allCaps.filter(function(c) {
+    var matchLayer  = activeLayer  === 'all' || c.layer  === activeLayer;
+    var matchStatus = activeStatus === 'all' || c.status === activeStatus;
+    var matchSearch = !q || c.title.toLowerCase().includes(q) || (c.description||'').toLowerCase().includes(q);
+    return matchLayer && matchStatus && matchSearch;
+  });
+  renderCards(filtered);
+}
+
+// RENDER
+function renderCards(caps) {
+  ['strategic','core','support'].forEach(function(layer) {
+    var grid  = document.getElementById('grid-'+layer);
+    var count = document.getElementById('count-'+layer);
+    var lc = caps.filter(function(c){ return c.layer === layer; });
+    count.textContent = lc.length + (lc.length === 1 ? ' förmåga' : ' förmågor');
+    grid.innerHTML = '';
+    if (lc.length === 0) {
+      grid.innerHTML = '<div class="empty-layer">Inga förmågor matchar nuvarande filter</div>';
+    } else {
+      lc.forEach(function(c){ grid.appendChild(buildCard(c)); });
+    }
+    document.getElementById('layer-'+layer).style.display = (activeLayer === 'all' || activeLayer === layer) ? '' : 'none';
+  });
+}
+
+function buildCard(c) {
+  var el = document.createElement('div');
+  el.className = 'cap-card';
+  el.dataset.status = c.status || 'defined';
+  el.dataset.id = c.id;
+  var label = STATUS_LABELS[c.status] || c.status || '—';
+  el.innerHTML =
+    '<div class="card-top">' +
+    '<div class="card-title">'+esc(c.title)+'</div>' +
+    '<div class="card-actions">' +
+    '<button class="card-btn" title="Redigera" onclick="openEditModal('+c.id+')">' +
+    '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+    '</button>' +
+    '<button class="card-btn delete" title="Ta bort" onclick="deleteCapability('+c.id+')">' +
+    '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>' +
+    '</button>' +
+    '</div></div>' +
+    '<div class="card-desc">'+esc(c.description||'')+'</div>' +
+    '<div><span class="status-badge sb-'+(c.status||'defined')+'">'+esc(label)+'</span></div>' +
+    (c.url ?
+      '<button class="card-link" title="Öppna länk: '+esc(c.url)+'" onclick="openCardUrl('+c.id+',event)">' +
+      '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' +
+      '</button>' : '');
+  return el;
+}
+
+// ÖPPNA KORTLÄNK
+function openCardUrl(id, ev) {
+  if (ev) ev.stopPropagation();
+  var cap = allCaps.find(function(c){ return c.id === id; });
+  if (!cap || !cap.url) return;
+  var u = String(cap.url).trim();
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  window.open(u, '_blank', 'noopener');
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ORG EDIT
+function startEditOrg() {
+  var span = document.getElementById('orgName');
+  var input = document.getElementById('orgInput');
+  input.value = org || '';
+  input.style.display = 'inline-block';
+  input.style.width = Math.max(180, span.offsetWidth + 20) + 'px';
+  span.style.display = 'none';
+  input.focus(); input.select();
+}
+function commitEditOrg() {
+  var input = document.getElementById('orgInput');
+  var val = input.value.trim();
+  org = val || org;
+  document.getElementById('orgName').textContent = org || '—';
+  document.getElementById('orgName').style.display = '';
+  input.style.display = 'none';
+}
+function cancelEditOrg() {
+  document.getElementById('orgName').style.display = '';
+  document.getElementById('orgInput').style.display = 'none';
+}
+
+// BESKRIVNING (kartans beskrivning, redigerbar som titeln)
+function renderMapDesc() {
+  var span = document.getElementById('mapDesc');
+  if (orgDesc) {
+    span.textContent = orgDesc;
+    span.classList.remove('placeholder');
+  } else {
+    span.textContent = 'Lägg till beskrivning…';
+    span.classList.add('placeholder');
+  }
+}
+function startEditDesc() {
+  var span = document.getElementById('mapDesc');
+  var input = document.getElementById('mapDescInput');
+  input.value = orgDesc || '';
+  input.style.display = 'inline-block';
+  span.style.display = 'none';
+  input.focus(); input.select();
+}
+function commitEditDesc() {
+  var input = document.getElementById('mapDescInput');
+  orgDesc = input.value.trim();
+  input.style.display = 'none';
+  document.getElementById('mapDesc').style.display = '';
+  renderMapDesc();
+}
+function cancelEditDesc() {
+  document.getElementById('mapDescInput').style.display = 'none';
+  document.getElementById('mapDesc').style.display = '';
+}
+
+// TITLE HINT (live feedback)
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('editTitle').addEventListener('input', function() {
+    var val = this.value.trim();
+    var hint = document.getElementById('titleHint');
+    if (!val) { hint.textContent = ''; return; }
+    var verbs = /^(hantera|administrera|utföra|säkerställa|genomföra|stödja|leverera|skapa|göra|ge|tillhandahålla|koordinera|planera)/i;
+    if (verbs.test(val)) {
+      hint.innerHTML = '&#9888;&#65039; Förmågor bör vara <strong>substantiv</strong>, inte verb. Prova: "Hantera löner" &#8594; "Lönehantering"';
+      hint.style.color = '#a06e00';
+    } else if (val.split(' ').length > 6) {
+      hint.textContent = '💡 Titeln är lite lång — sikta på 2–5 ord.';
+      hint.style.color = 'var(--text-secondary)';
+    } else {
+      hint.textContent = '';
+    }
+  });
+});
+
+// ADD / EDIT MODAL
+var editingId = null;
+var editComments = [];
+var lastCommentAuthor = '';
+
+function renderComments() {
+  var list = document.getElementById('commentList');
+  if (!editComments.length) {
+    list.innerHTML = '<div class="comment-empty">Inga kommentarer ännu.</div>';
+    return;
+  }
+  list.innerHTML = editComments.map(function(cm, i) {
+    var t = cm.ts ? new Date(cm.ts).toLocaleString('sv-SE', { dateStyle:'short', timeStyle:'short' }) : '';
+    return '<div class="comment">' +
+      '<div class="comment__meta">' +
+        '<span class="comment__author">' + esc(cm.author||'Anonym') + '</span>' +
+        '<span style="display:flex;align-items:baseline;gap:.35rem">' +
+          '<span class="comment__time">' + esc(t) + '</span>' +
+          '<button class="comment__del" title="Ta bort kommentar" onclick="removeComment(' + i + ')">✕</button>' +
+        '</span>' +
+      '</div>' +
+      '<div class="comment__text">' + esc(cm.text||'') + '</div>' +
+    '</div>';
+  }).join('');
+}
+function addComment() {
+  var ta = document.getElementById('commentText');
+  var au = document.getElementById('commentAuthor');
+  var text = ta.value.trim();
+  if (!text) { ta.focus(); return; }
+  lastCommentAuthor = au.value.trim();
+  editComments.push({ author: au.value.trim() || 'Anonym', ts: new Date().toISOString(), text: text });
+  ta.value = '';
+  renderComments();
+  ta.focus();
+}
+function removeComment(i) {
+  editComments.splice(i, 1);
+  renderComments();
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('editModalTitle').textContent = '➕ Ny förmåga';
+  document.getElementById('editTitle').value = '';
+  document.getElementById('editDescription').value = '';
+  document.getElementById('editUrl').value = '';
+  document.getElementById('editStatus').value = 'defined';
+  document.getElementById('editLayer').value = 'core';
+  editComments = [];
+  document.getElementById('commentAuthor').value = lastCommentAuthor;
+  document.getElementById('commentText').value = '';
+  renderComments();
+  document.getElementById('editDeleteBtn').style.display = 'none';
+  document.getElementById('titleHint').textContent = '';
+  document.getElementById('editTitle').style.borderColor = '';
+  document.getElementById('editModal').classList.add('active');
+  setTimeout(function(){ document.getElementById('editTitle').focus(); }, 50);
+}
+function openEditModal(id) {
+  var cap = allCaps.find(function(c){ return c.id === id; });
+  if (!cap) return;
+  editingId = id;
+  document.getElementById('editModalTitle').textContent = '✏️ Redigera förmåga';
+  document.getElementById('editTitle').value = cap.title;
+  document.getElementById('editDescription').value = cap.description || '';
+  document.getElementById('editUrl').value = cap.url || '';
+  document.getElementById('editStatus').value = cap.status || 'defined';
+  document.getElementById('editLayer').value = cap.layer || 'core';
+  editComments = (Array.isArray(cap.comments) ? cap.comments : []).map(function(cm) {
+    return { author: cm.author || 'Anonym', ts: cm.ts || '', text: cm.text || '' };
+  });
+  document.getElementById('commentAuthor').value = lastCommentAuthor;
+  document.getElementById('commentText').value = '';
+  renderComments();
+  document.getElementById('editDeleteBtn').style.display = '';
+  document.getElementById('titleHint').textContent = '';
+  document.getElementById('editTitle').style.borderColor = '';
+  document.getElementById('editModal').classList.add('active');
+  setTimeout(function(){ document.getElementById('editTitle').focus(); }, 50);
+}
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('active');
+  editingId = null;
+}
+function saveCapability() {
+  var title = document.getElementById('editTitle').value.trim();
+  var description = document.getElementById('editDescription').value.trim();
+  var url = document.getElementById('editUrl').value.trim();
+  var status = document.getElementById('editStatus').value;
+  var layer = document.getElementById('editLayer').value;
+  if (!title) {
+    document.getElementById('editTitle').focus();
+    document.getElementById('editTitle').style.borderColor = '#d24723';
+    return;
+  }
+  document.getElementById('editTitle').style.borderColor = '';
+  var wasNew = editingId === null;
+  if (!wasNew) {
+    var cap = allCaps.find(function(c){ return c.id === editingId; });
+    if (cap) { cap.title = title; cap.description = description; cap.url = url; cap.status = status; cap.layer = layer; cap.comments = editComments.slice(); }
+  } else {
+    var newId = allCaps.length > 0 ? Math.max.apply(null, allCaps.map(function(c){ return c.id; })) + 1 : 1;
+    allCaps.push({ id: newId, title: title, description: description, url: url, status: status, layer: layer, comments: editComments.slice() });
+  }
+  closeEditModal();
+  renderStats(allCaps);
+  applyFilters();
+  document.getElementById('emptyWelcome').style.display = 'none';
+  document.getElementById('layersContainer').style.display = '';
+  showToast(wasNew ? '✅ Förmåga tillagd' : '✅ Förmåga uppdaterad');
+}
+function deleteCapability(id) {
+  if (!confirm('Ta bort denna förmåga?')) return;
+  allCaps = allCaps.filter(function(c){ return c.id !== id; });
+  renderStats(allCaps);
+  applyFilters();
+  showToast('🗑 Förmåga borttagen');
+}
+function deleteFromModal() {
+  if (editingId === null) return;
+  closeEditModal();
+  deleteCapability(editingId);
+}
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === e.currentTarget) closeEditModal();
+});
+
+// STATS BAR
+function renderStats(caps) {
+  var total = caps.length;
+  var bySt = {};
+  caps.forEach(function(c){ bySt[c.status] = (bySt[c.status]||0)+1; });
+  var statusColors = {
+    initial:'var(--c-red)',developing:'var(--c-yellow)',
+    defined:'var(--gs-blue)',managed:'var(--c-green)',optimized:'var(--c-purple)'
+  };
+  var html = '<div class="stat"><strong>'+total+'</strong> förmågor totalt</div>';
+  Object.entries(bySt).forEach(function(kv) {
+    html += '<div class="stat"><div class="stat-dot" style="background:'+(statusColors[kv[0]]||'#999')+'"></div>'+kv[1]+' '+(STATUS_LABELS[kv[0]]||kv[0])+'</div>';
+  });
+  document.getElementById('statsBar').innerHTML = html;
+}
+
+// LOAD DATA
+function loadData(data) {
+  if (!data.capabilities || !Array.isArray(data.capabilities)) {
+    alert('Ogiltig JSON: fältet "capabilities" saknas eller är inte en array.');
+    return;
+  }
+  allCaps = data.capabilities
+    .filter(function(c){ return c.title; })
+    .map(function(c){
+      var obj = Object.assign({}, c, { layer: normalizeLayer(c.layer) });
+      obj.comments = Array.isArray(c.comments) ? c.comments.map(function(cm){
+        return { author: cm.author || cm.name || 'Anonym', ts: cm.ts || cm.timestamp || cm.time || '', text: cm.text || cm.comment || '' };
+      }) : [];
+      return obj;
+    });
+  org = data.organization || 'Okänd organisation';
+  document.getElementById('orgName').textContent = org;
+  orgDesc = data.description || '';
+  renderMapDesc();
+  document.getElementById('emptyWelcome').style.display = 'none';
+  document.getElementById('layersContainer').style.display = '';
+  document.getElementById('footerDate').textContent =
+    data.exportDate ? 'Exporterad: ' + new Date(data.exportDate).toLocaleDateString('sv-SE') : '';
+  renderStats(allCaps);
+  applyFilters();
+}
+
+// IMPORT MODAL
+function openImport() {
+  document.getElementById('importModal').classList.add('active');
+}
+function closeModal() {
+  document.getElementById('importModal').classList.remove('active');
+  document.getElementById('pasteError').classList.remove('visible');
+  document.getElementById('jsonPasteArea').classList.remove('error');
+}
+document.getElementById('importModal').addEventListener('click', function(e) {
+  if (e.target === e.currentTarget) closeModal();
+});
+function switchImportTab(tab, btn) {
+  document.querySelectorAll('.import-tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.import-pane').forEach(function(p){ p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('pane-'+tab).classList.add('active');
+}
+function loadFromPaste() {
+  var raw = document.getElementById('jsonPasteArea').value.trim();
+  var errEl = document.getElementById('pasteError');
+  var area = document.getElementById('jsonPasteArea');
+  try {
+    var data = JSON.parse(raw);
+    area.classList.remove('error');
+    errEl.classList.remove('visible');
+    closeModal();
+    loadData(data);
+    showToast('✅ JSON inläst');
+  } catch(e) {
+    area.classList.add('error');
+    errEl.textContent = '⚠ Ogiltig JSON — ' + e.message;
+    errEl.classList.add('visible');
+  }
+}
+
+// FILE INPUT
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  closeModal();
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try { loadData(JSON.parse(ev.target.result)); showToast('✅ Fil inläst'); }
+    catch(err) { alert('Kunde inte tolka JSON-filen. Kontrollera att formatet är korrekt.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// DRAG & DROP
+document.addEventListener('dragover', function(e) { e.preventDefault(); document.getElementById('dropOverlay').classList.add('active'); });
+document.addEventListener('dragleave', function(e) { if (!e.relatedTarget) document.getElementById('dropOverlay').classList.remove('active'); });
+document.addEventListener('drop', function(e) {
+  e.preventDefault();
+  document.getElementById('dropOverlay').classList.remove('active');
+  var file = e.dataTransfer.files[0];
+  if (!file || !file.name.endsWith('.json')) { alert('Vänligen släpp en .json-fil.'); return; }
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try { loadData(JSON.parse(ev.target.result)); showToast('✅ Fil inläst'); }
+    catch(err) { alert('Kunde inte tolka JSON-filen.'); }
+  };
+  reader.readAsText(file);
+});
+
+// EXPORT MENU
+function toggleExportMenu() {
+  var menu = document.getElementById('exportMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('exportMenuWrap');
+  if (wrap && !wrap.contains(e.target)) document.getElementById('exportMenu').style.display = 'none';
+});
+
+function buildExportData() {
+  return {
+    exportDate: new Date().toISOString(),
+    version: '1.0',
+    organization: org,
+    description: orgDesc || '',
+    capabilities: allCaps.map(function(c, i) {
+      var out = { id: i+1, title: c.title, description: c.description||'', status: c.status, layer: c.layer };
+      if (c.url) out.url = c.url;
+      if (c.comments && c.comments.length) {
+        out.comments = c.comments.map(function(cm){ return { author: cm.author||'Anonym', ts: cm.ts||'', text: cm.text||'' }; });
+      }
+      return out;
+    }),
+  };
+}
+
+// EXPORT JSON
+function exportJSON() {
+  if (!allCaps.length) { alert('Ingen karta inläst.'); return; }
+  var data = buildExportData();
+  var fname = 'formågekarta_' + (org||'export').replace(/[^a-zåäö0-9]/gi,'_').toLowerCase() + '_' + new Date().toISOString().split('T')[0] + '.json';
+  download(new Blob([JSON.stringify(data,null,2)], {type:'application/json'}), fname);
+}
+
+// EXPORT SHARE LINK (base64 querystring)
+function exportShareLink() {
+  if (!allCaps.length) { alert('Ingen karta inläst.'); return; }
+  try {
+    var data = buildExportData();
+    var json = JSON.stringify(data);
+    var b64 = btoa(unescape(encodeURIComponent(json)));
+    var url = window.location.origin + window.location.pathname + '?data=' + encodeURIComponent(b64);
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(function() { showToast('🔗 Delningslänk kopierad!'); });
+    } else {
+      prompt('Kopiera länken:', url);
+    }
+  } catch(e) {
+    alert('Kunde inte skapa delningslänk: ' + e.message);
+  }
+}
+
+// EXPORT MARKDOWN
+function exportMarkdown() {
+  if (!allCaps.length) { alert('Ingen karta inläst.'); return; }
+  var md = '# Förmågekarta — ' + org + '\n\n';
+  if (orgDesc) md += '*' + orgDesc + '*\n\n';
+  md += '*Exporterad: ' + new Date().toLocaleDateString('sv-SE') + '*\n\n';
+  ['strategic','core','support'].forEach(function(layer) {
+    var caps = allCaps.filter(function(c){ return c.layer === layer; });
+    if (!caps.length) return;
+    md += '## ' + LAYER_MAP[layer] + '\n\n';
+    caps.forEach(function(c) {
+      md += '### ' + c.title + '\n\n**Mognad:** ' + (STATUS_LABELS[c.status]||c.status) + '\n\n' + (c.description||'') + '\n\n';
+      if (c.url) md += '🔗 ' + c.url + '\n\n';
+      if (c.comments && c.comments.length) {
+        md += '**Kommentarer:**\n\n';
+        c.comments.forEach(function(cm) {
+          var t = cm.ts ? new Date(cm.ts).toLocaleString('sv-SE', { dateStyle:'short', timeStyle:'short' }) : '';
+          md += '- *' + (cm.author||'Anonym') + (t ? ' · ' + t : '') + ':* ' + String(cm.text||'').replace(/\n/g,' ') + '\n';
+        });
+        md += '\n';
+      }
+      md += '---\n\n';
+    });
+  });
+  download(new Blob([md], {type:'text/markdown'}), 'formågekarta_'+new Date().toISOString().split('T')[0]+'.md');
+}
+
+// EXPORT PNG
+async function exportPNG() {
+  if (!allCaps.length) { alert('Ingen karta inläst.'); return; }
+  if (typeof html2canvas === 'undefined') {
+    await new Promise(function(resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s.onload = resolve;
+      s.onerror = function(){ reject(new Error('Kunde inte ladda html2canvas')); };
+      document.head.appendChild(s);
+    }).catch(function() {
+      alert('PNG-export kräver internetanslutning. Prova Markdown-export.');
+      return null;
+    });
+    if (typeof html2canvas === 'undefined') return;
+  }
+  document.body.classList.add('exporting');
+  await new Promise(function(r){ setTimeout(r, 100); });
+  try {
+    var canvas = await html2canvas(document.getElementById('mapMain'), {
+      backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim().replace(/['"]/g,'') || '#ffffff',
+      scale: 2, logging: false, useCORS: true,
+    });
+    canvas.toBlob(function(blob) {
+      download(blob, 'formågekarta_'+new Date().toISOString().split('T')[0]+'.png');
+      document.body.classList.remove('exporting');
+    }, 'image/png');
+  } catch(e) {
+    document.body.classList.remove('exporting');
+    alert('PNG-export misslyckades: ' + e.message);
+  }
+}
+
+function download(blob, name) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// HJÄLP
+function openHelp() { document.getElementById('helpModal').classList.add('active'); }
+function closeHelp() { document.getElementById('helpModal').classList.remove('active'); }
+document.getElementById('helpModal').addEventListener('click', function(e) {
+  if (e.target === e.currentTarget) closeHelp();
+});
+
+// LOAD FROM QUERYSTRING (?data=base64)
+(function loadFromQueryString() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var encoded = params.get('data');
+    if (!encoded) return;
+    var json = decodeURIComponent(escape(atob(decodeURIComponent(encoded))));
+    var data = JSON.parse(json);
+    loadData(data);
+    showToast('🔗 Karta laddad från delningslänk');
+  } catch(e) {
+    console.warn('Kunde inte läsa data från URL:', e.message);
+  }
+})();
+</script>
+</body>
+</html>
