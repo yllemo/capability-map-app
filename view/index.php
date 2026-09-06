@@ -301,6 +301,7 @@ function sectionChrome(string $layerKey, array $tax): array {
    class="capability-card cap-card cap-maturity-<?= h((string)$m) ?> block p-2.5 rounded-md border border-gray-200/70 dark:border-neutral-700/70 border-l-[5px] <?= h($border) ?> shadow-sm hover:shadow-md"
    data-maturity="<?= h((string)$m) ?>">
   <div class="flex justify-between items-start gap-3">
+    <?php if (isset($cap->meta['redirect_map'])): ?><span class="text-xs text-gray-500" title="Länkad förmåga">↗</span><?php endif; ?>
     <h4 class="font-semibold text-sm text-gray-900 dark:text-neutral-50 leading-snug pr-2">
       <?= h($cap->name) ?>
     </h4>

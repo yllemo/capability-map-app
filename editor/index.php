@@ -50,6 +50,10 @@ if ($rel !== '') {
       $parsed = Frontmatter::parse($raw);
       $meta = $parsed['meta'] ?? [];
       $body = $parsed['body'] ?? '';
+      if (isset($meta['redirect_map'])) {
+        header('Location: reference.php?map=' . rawurlencode($selectedKey) . '&file=' . rawurlencode($rel));
+        exit;
+      }
     }
   } catch (Throwable $e) {
     $notice = 'Ogiltig fil';
@@ -474,8 +478,8 @@ if(newFolderForm){
       const result = await response.json();
 
       if(result.success){
-        // Reload page to show new folder
-        window.location.reload();
+        // Open the new map, clearing any file selected in the previous map.
+        window.location.assign(result.redirect);
       } else {
         errorDiv.textContent = result.error || 'Ett fel uppstod';
         errorDiv.style.display = 'block';

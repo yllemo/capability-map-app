@@ -18,7 +18,7 @@ foreach ($caps as $cap) {
   if ($m >= 1 && $m <= 5) $knownMaturity[] = $m;
 }
 ksort($areas);
-$layers = array_unique(array_merge(array_keys($tax['layers'] ?? []), array_keys($groups)));
+$layers = array_unique(array_merge(['ledning_styrning', 'karnprocesser', 'verksamhetsstod'], array_keys($tax['layers'] ?? []), array_keys($groups)));
 $labels = [0 => 'Ej bedömd', 1 => 'Initial', 2 => 'Under utveckling', 3 => 'Definierad', 4 => 'Hanterad', 5 => 'Optimerad'];
 $mapQuery = '?map=' . rawurlencode($selectedKey);
 $layerChrome = [
@@ -65,12 +65,19 @@ $layerChrome = [
   <section class="toolbar" aria-label="Filtrera förmågor">
     <div class="filter-row"><label class="search-label" for="overview-search">Sök förmåga<input id="overview-search" type="search" placeholder="Namn, beskrivning, ID eller tagg…"></label><label for="area-filter">Område<select id="area-filter"><option value="">Alla områden</option><?php foreach ($areas as $area => $_): ?><option><?= h($area) ?></option><?php endforeach; ?></select></label><label for="maturity-filter">Mognad<select id="maturity-filter"><option value="">Alla nivåer</option><?php foreach ($labels as $m => $label): ?><option value="<?= $m ?>"><?= $m ? $m . ' · ' : '' ?><?= h($label) ?></option><?php endforeach; ?></select></label></div>
     <div class="filter-bottom"><div class="chips" aria-label="Skikt"><button type="button" data-layer="" aria-pressed="true">Alla skikt</button><?php foreach ($layers as $layer): ?><button type="button" data-layer="<?= h($layer) ?>" aria-pressed="false"><?= h($tax['layer_display_names'][$layer] ?? $tax['layers'][$layer] ?? $layer) ?></button><?php endforeach; ?></div><button class="reset" type="button" id="reset-filters">Rensa filter</button></div>
+    <fieldset class="card-display-options">
+      <legend>Visa på korten</legend>
+      <?php foreach (['description' => 'Beskrivning', 'id' => 'ID', 'tags' => 'Taggar', 'metadata' => 'Metadata', 'area' => 'Område och typ', 'maturity' => 'Mognadsetikett'] as $field => $label): ?>
+        <label><input type="checkbox" data-card-option="<?= h($field) ?>" <?= in_array($field, ['description', 'maturity'], true) ? 'checked' : '' ?>> <?= h($label) ?></label>
+      <?php endforeach; ?>
+      <p>Metadata visar ansvarig, status, nivå, kritikalitet, risk och uppdateringsdatum när uppgifterna finns. Valen sparas för den nya vyn i din webbläsare.</p>
+    </fieldset>
   </section>
     </div>
   </details>
   <div class="map-caption"><p id="result-count" role="status" aria-live="polite"><?= count($caps) ?> förmågor</p><span>Kortens färg visar mognad</span></div>
   <div id="map">
-  <?php foreach ($layers as $index => $layer): if (empty($groups[$layer])) continue; ksort($groups[$layer]); ?>
+  <?php foreach ($layers as $index => $layer): $groups[$layer] = $groups[$layer] ?? []; ksort($groups[$layer]); ?>
     <section class="layer" data-section="<?= h($layer) ?>">
       <header class="layer-header"><h2 class="layer-badge"><?= h($layerChrome[$layer][0] ?? $tax['layer_display_names'][$layer] ?? $tax['layers'][$layer] ?? $layer) ?></h2><span class="layer-count"><?= array_sum(array_map('count', $groups[$layer])) ?> förmågor</span><span class="layer-line"></span><span class="layer-description"><?= h($layerChrome[$layer][1] ?? '') ?></span></header>
       <div class="layer-cards">
@@ -81,8 +88,24 @@ $layerChrome = [
           $search = $cap->name . ' ' . $cap->description . ' ' . $cap->id . ' ' . $area . ' ' . json_encode($tags, JSON_UNESCAPED_UNICODE);
         ?>
         <a class="cap-card maturity-<?= $m ?>" data-capability data-search="<?= h($search) ?>" data-layer="<?= h($layer) ?>" data-area="<?= h($area) ?>" data-maturity="<?= $m ?>" href="<?= h(base_path('view/capability.php?id=' . rawurlencode($cap->id) . '&map=' . rawurlencode($selectedKey))) ?>">
-          <h4><?= h($cap->name) ?></h4><p class="card-desc"><?= h($cap->description ?: 'Ingen beskrivning angiven.') ?></p>
-          <div class="card-bottom"><span class="status-badge"><?= h($labels[$m]) ?></span></div>
+          <span class="overview-card-id" data-card-field="id" hidden><?= h($cap->id) ?></span>
+          <?php if (isset($cap->meta['redirect_map'])): ?><span class="overview-card-context" title="Visar originalförmågan från en annan plats">↗ Länkad förmåga</span><?php endif; ?>
+          <h4><?= h($cap->name) ?></h4><p class="card-desc" data-card-field="description"><?= h($cap->description ?: 'Ingen beskrivning angiven.') ?></p>
+          <div class="overview-card-context" data-card-field="area" hidden><?= h($area) ?><?php if ($cap->type): ?> · <?= h($tax['types'][$cap->type] ?? $cap->type) ?><?php endif; ?></div>
+          <?php $metadata = [];
+            foreach (['owner' => 'Ansvarig', 'status' => 'Status', 'level' => 'Nivå', 'criticality' => 'Kritikalitet', 'risk_level' => 'Risk', 'updated' => 'Uppdaterad'] as $key => $label) {
+              $value = $cap->get($key);
+              if (is_scalar($value) && trim((string)$value) !== '' && $value !== false) $metadata[$label] = (string)$value;
+            }
+          ?>
+          <?php if ($metadata): ?><dl class="overview-card-meta" data-card-field="metadata" hidden>
+            <?php foreach ($metadata as $label => $value): ?><div><dt><?= h($label) ?></dt><dd><?= h($value) ?></dd></div><?php endforeach; ?>
+          </dl><?php endif; ?>
+          <?php $visibleTags = array_filter($tags, fn($tag) => is_scalar($tag) && trim((string)$tag) !== ''); ?>
+          <?php if ($visibleTags): ?><div class="overview-card-tags" data-card-field="tags" aria-label="Taggar" hidden>
+            <?php foreach ($visibleTags as $tag): ?><span><?= h((string)$tag) ?></span><?php endforeach; ?>
+          </div><?php endif; ?>
+          <div class="card-bottom" data-card-field="maturity"><span class="status-badge"><?= h($labels[$m]) ?></span></div>
         </a>
         <?php endforeach; ?>
       </div></section>

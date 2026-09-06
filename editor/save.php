@@ -50,6 +50,11 @@ use App\Frontmatter;
 $repo = new CapabilityRepository($contentDir);
 $raw = file_exists($abs) ? (string)file_get_contents($abs) : '';
 $parsed = Frontmatter::parse($raw);
+if (isset($parsed['meta']['redirect_map'])) {
+  http_response_code(400);
+  echo 'Referenskort ska redigeras på referenssidan.';
+  exit;
+}
 $oldId = $parsed['meta']['id'] ?? '';
 
 if ($id !== $oldId) {

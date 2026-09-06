@@ -92,6 +92,29 @@ open http://localhost:8080/view/index.php
 Nedladdningsikonen bredvid **Redigera** hämtar förmågan som `.md`, inklusive
 hela originalets metadata och brödtext.
 
+### Referenskort mellan kartor
+
+På **+ Ny → Länka en befintlig förmåga (referenskort)** väljer du en
+originalförmåga från valfri konfigurerad karta. En minimal `.md`-fil skapas
+i den aktuella kartans `references/`-katalog:
+
+```yaml
+---
+id: cap-ref-eget-unikt-id
+redirect_map: content2
+redirect_id: cap-original-001
+---
+```
+
+Kortets namn, beskrivning, metadata, taggar, skikt och område hämtas från
+originalet vid visning. Klick öppnar originalets detaljsida. Kartnyckel och
+mål-ID används för att skilja likadana ID:n i olika kartor. Om originalet
+försvinner eller referenser bildar en loop visas en bruten referens.
+
+I editorn öppnas referensfilen på en separat sida där du kan ändra mål eller
+ta bort referensen. Originalet påverkas inte. Vanlig metadataredigering är
+spärrad för referensfiler för att behålla deras minimala format.
+
 ### Editor (`/editor/index.php`)
 - ✏️ Markdown-editor med live preview
 - 📝 YAML frontmatter-redigering
@@ -104,6 +127,10 @@ hela originalets metadata och brödtext.
 - ✅ Success/error feedback-meddelanden
 - 🛡️ Validering av duplicerade ID:n
 - 📥 Importera JSON från capability-map-skill till vald karta
+- På **+ Ny → Importera en förmåga från JSON** kan du läsa samma JSON-format,
+  välja en förmåga ur filen och fylla i formuläret. Granska och ändra uppgifterna
+  innan du klickar på **Skapa**. Beskrivning, mognad, länk och Markdown följer med;
+  övriga förmågor i JSON-filen importeras inte.
 
 ### Gemensam favicon
 
@@ -117,6 +144,8 @@ att uppdaterade ikoner ska hämtas av webbläsaren.
 php tests/capability_json_import.php
 php tests/frontmatter_empty_fields.php
 php tests/content_migration.php
+php tests/content_folders.php
+php tests/capability_references.php
 node --check assets/overview.js
 ```
 
@@ -382,8 +411,11 @@ i `config/app.php`. Filen är lokal och ignoreras av Git; säkerhetskopiera den 
 med innehållet. Den innehåller `content_root` relativt applikationsroten och
 `content_dirs` med `folder`, `label` och `description` per karta. Alla vyer,
 editorn, import/export, AI och MCP får sökvägar via samma konfigurationsfunktioner.
-Nya kartkataloger skapas i editorn under innehållsroten. På äldre installationer
-måste migreringen köras innan nya kartkataloger kan skapas.
+Nya kartkataloger skapas via **+ Folder** i editorn under innehållsroten.
+Befintliga kartposter bevaras i konfigurationen och den nya kartan öppnas direkt.
+Om kartorna redan ligger i egna undermappar under `/content` via `config/app.php`
+skapas JSON-konfigurationen automatiskt vid första nya katalogen. På äldre
+installationer med kartor direkt under appens rot måste migreringen köras först.
 
 Äldre installationer som redan använder `config/content.local.json` fungerar
 fortfarande. Vid nästa skapande av en kartkatalog sparas konfigurationen under

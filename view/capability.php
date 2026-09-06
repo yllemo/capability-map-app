@@ -45,6 +45,18 @@ if (!$data) {
 }
 
 $cap = $data['cap'];
+if (isset($cap->meta['redirect_map'])) {
+  try {
+    $target = App\CapabilityReference::resolve($cap->meta, get_content_dirs());
+    $url = base_path('view/capability.php?id=' . rawurlencode($target['cap']->id) . '&map=' . rawurlencode($target['map']));
+    if (($_GET['download'] ?? '') === 'md') $url .= '&download=md';
+    header('Location: ' . $url, true, 302);
+  } catch (RuntimeException $e) {
+    http_response_code(404);
+    echo h($e->getMessage());
+  }
+  exit;
+}
 if (($_GET['download'] ?? '') === 'md') {
   $content = file_get_contents($cap->path);
   if ($content === false) {

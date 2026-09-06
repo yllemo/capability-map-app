@@ -5,9 +5,11 @@ namespace App;
 
 final class CapabilityRepository {
   private string $contentDir;
+  private array $contentDirs;
 
-  public function __construct(string $contentDir) {
+  public function __construct(string $contentDir, ?array $contentDirs = null) {
     $this->contentDir = rtrim($contentDir, '/');
+    $this->contentDirs = $contentDirs ?? (function_exists('get_content_dirs') ? \get_content_dirs() : []);
   }
 
   /** @return array<Capability> */
@@ -19,14 +21,20 @@ final class CapabilityRepository {
       $parsed = Frontmatter::parse($raw);
       $meta = $parsed['meta'] ?? [];
       if (!is_array($meta)) $meta = [];
-      if (!isset($meta['id']) || !isset($meta['name'])) continue;
-      $caps[] = new Capability($meta, $file);
+      if (!isset($meta['id']) || (!isset($meta['name']) && !isset($meta['redirect_map']))) continue;
+      $caps[] = $this->displayCapability($meta, $file);
     }
     usort($caps, fn($a,$b) => strcmp($a->name, $b->name));
     return $caps;
   }
 
   public function byId(string $id): ?array {
+    $data = $this->rawById($id);
+    if ($data) $data['cap'] = $this->displayCapability($data['cap']->meta, $data['cap']->path);
+    return $data;
+  }
+
+  public function rawById(string $id): ?array {
     foreach ($this->iterateMarkdownFiles($this->contentDir) as $file) {
       $raw = file_get_contents($file);
       if ($raw === false) continue;
@@ -39,9 +47,24 @@ final class CapabilityRepository {
     return null;
   }
 
+  private function displayCapability(array $meta, string $file): Capability {
+    if (!isset($meta['redirect_map'])) return new Capability($meta, $file);
+    try {
+      $target = CapabilityReference::resolve($meta, $this->contentDirs);
+      $display = $target['cap']->meta;
+      $display['id'] = $meta['id'];
+      $display['redirect_map'] = $target['map'];
+      $display['redirect_id'] = $target['cap']->id;
+      return new Capability($display, $file);
+    } catch (\RuntimeException $e) {
+      return new Capability(array_merge($meta, ['name' => 'Bruten referens', 'description' => $e->getMessage(), 'layer' => 'verksamhetsstod', 'area' => 'Referenser']), $file);
+    }
+  }
+
   /** @return array<string> */
   private function iterateMarkdownFiles(string $dir): array {
     $out = [];
+    if (!is_dir($dir)) return $out;
     $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
     foreach ($it as $f) {
       /** @var \SplFileInfo $f */

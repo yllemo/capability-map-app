@@ -9,6 +9,25 @@
   const maturity = document.querySelector('#maturity-filter');
   const chips = [...document.querySelectorAll('button[data-layer]')];
   const cards = [...document.querySelectorAll('[data-capability]')];
+  const optionKey = 'capmap_overview_card_options';
+  const options = [...document.querySelectorAll('[data-card-option]')];
+  let savedOptions = {};
+  try {
+    const saved = JSON.parse(localStorage.getItem(optionKey) || '{}');
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) savedOptions = saved;
+  } catch (_) { /* Storage may be disabled or contain an older value. */ }
+  options.forEach(option => {
+    const field = option.dataset.cardOption;
+    if (typeof savedOptions[field] === 'boolean') option.checked = savedOptions[field];
+    const elements = [...document.querySelectorAll(`[data-card-field="${field}"]`)];
+    const apply = () => elements.forEach(element => { element.hidden = !option.checked; });
+    apply();
+    option.addEventListener('change', () => {
+      apply();
+      const values = Object.fromEntries(options.map(input => [input.dataset.cardOption, input.checked]));
+      try { localStorage.setItem(optionKey, JSON.stringify(values)); } catch (_) {}
+    });
+  });
   let layer = '';
   const normalize = value => value.normalize('NFC').toLocaleLowerCase('sv');
   function filter() {
@@ -21,7 +40,6 @@
     document.querySelectorAll('.area').forEach(group => { group.hidden = !group.querySelector('[data-capability]:not([hidden])'); });
     document.querySelectorAll('.layer').forEach(section => {
       const count = section.querySelectorAll('[data-capability]:not([hidden])').length;
-      section.hidden = !count;
       section.querySelector('.layer-count').textContent = `${count} förmågor`;
     });
     document.querySelector('#result-count').textContent = `Visar ${visible} av ${cards.length} förmågor`;

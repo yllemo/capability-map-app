@@ -140,7 +140,7 @@ final class ContentMigration {
     $path = $project . '/content/.capmap-config.json';
     $temp = $path . '.' . bin2hex(random_bytes(8)) . '.tmp';
     $json = json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-    if (file_put_contents($temp, $json, LOCK_EX) !== strlen($json)) { @unlink($temp); throw new \RuntimeException('Kunde inte skriva innehållskonfigurationen under /content.'); }
-    if (!rename($temp, $path)) { @unlink($temp); throw new \RuntimeException('Kunde inte aktivera innehållskonfigurationen.'); }
+    if (@file_put_contents($temp, $json, LOCK_EX) !== strlen($json)) { @unlink($temp); throw new \RuntimeException('Kunde inte skriva innehållskonfigurationen under /content.'); }
+    if (!@rename($temp, $path)) { @unlink($temp); throw new \RuntimeException('Kunde inte aktivera innehållskonfigurationen.'); }
   }
 }
