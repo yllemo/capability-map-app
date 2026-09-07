@@ -302,7 +302,7 @@ function sectionChrome(string $layerKey, array $tax): array {
    data-maturity="<?= h((string)$m) ?>">
 <a href="<?= h($capHref) ?>" style="display:block;color:inherit;text-decoration:none">
   <div class="flex justify-between items-start gap-3">
-    <?php if (isset($cap->meta['redirect_map'])): ?><span class="text-xs text-gray-500" title="Länkad förmåga">↗</span><?php endif; ?>
+    <?php if (isset($cap->meta['redirect_map']) && is_authed()): ?><span class="text-xs text-gray-500" title="Länkad förmåga">↗</span><?php endif; ?>
     <h4 class="font-semibold text-sm text-gray-900 dark:text-neutral-50 leading-snug pr-2">
       <?= h($cap->name) ?>
     </h4>

@@ -12,7 +12,9 @@ try {
   if (!is_uploaded_file($file['tmp_name'])) throw new RuntimeException('Ogiltig uppladdning.');
   $json = file_get_contents($file['tmp_name']);
   if ($json === false) throw new RuntimeException('Kunde inte läsa filen.');
-  $import = App\CapabilityJsonImport::convert($json);
+  $prefix = $_POST['id_prefix'] ?? '';
+  if (!is_string($prefix)) throw new RuntimeException('ID-prefix måste vara text.');
+  $import = App\CapabilityJsonImport::convert($json, $prefix);
   $items = [];
   foreach ($import['files'] as $markdown) $items[] = App\Frontmatter::parse($markdown);
   echo json_encode(['success' => true, 'items' => $items], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);

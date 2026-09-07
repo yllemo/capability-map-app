@@ -149,6 +149,7 @@ if ($rel === '') {
 
   $editor .= '<div class="grid grid--2" style="gap:10px">';
   $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Markdown</label>';
+  $editor .= '<button class="btn btn--secondary" type="button" data-capability-link-picker data-targets-url="'.h(base_path('editor/link_targets.php')).'" style="margin-bottom:8px" disabled>↗ Infoga förmågelänk</button>';
   $editor .= '<input type="hidden" name="body" id="bodyInput" value="'.h($body).'">';
   $editor .= '<textarea class="textarea" id="bodyFallback" style="display:none;height:52vh">'.h($body).'</textarea>';
   $editor .= '<div id="markdownEditor" class="card" style="height:52vh;border:1px solid var(--border);border-radius:10px;overflow:hidden"></div>';
@@ -172,6 +173,9 @@ if ($rel === '') {
   $editor .= '</form>';
 
   // Delete form (hidden)
+  ob_start();
+  require __DIR__ . '/../app/templates/link_picker.php';
+  $editor .= ob_get_clean();
   $editor .= '<form id="deleteForm" method="post" action="delete.php" style="display:none">';
   $editor .= '<input type="hidden" name="file" value="'.h($rel).'">';
   $editor .= csrf_field();
@@ -217,6 +221,28 @@ if ($rel === '') {
       let hasUnsavedChanges = false;
       const originalContent = bodyInput.value;
       let monacoEditor = null;
+      let linkSelection = null;
+      document.addEventListener("capability-link-open", event => {
+        if (monacoEditor) {
+          linkSelection = monacoEditor.getSelection();
+          event.detail.selectedText = monacoEditor.getModel().getValueInRange(linkSelection);
+        } else {
+          linkSelection = { start: fallbackTa.selectionStart, end: fallbackTa.selectionEnd };
+          event.detail.selectedText = fallbackTa.value.slice(linkSelection.start, linkSelection.end);
+        }
+      });
+      document.addEventListener("capability-link-insert", event => {
+        if (monacoEditor) {
+          monacoEditor.focus();
+          monacoEditor.pushUndoStop();
+          monacoEditor.executeEdits("capability-link", [{ range: linkSelection || monacoEditor.getSelection(), text: event.detail, forceMoveMarkers: true }]);
+          monacoEditor.pushUndoStop();
+        } else {
+          fallbackTa.focus();
+          fallbackTa.setRangeText(event.detail, linkSelection?.start ?? fallbackTa.selectionStart, linkSelection?.end ?? fallbackTa.selectionEnd, "end");
+          handleBodyInput();
+        }
+      });
 
       function getBodyValue(){
         if (monacoEditor) return monacoEditor.getValue();
@@ -233,7 +259,7 @@ if ($rel === '') {
         const currentValue = getBodyValue();
         setBodyValue(currentValue);
         fd.set("md", currentValue);
-        const res = await fetch("render.php", {method:"POST", body: fd});
+        const res = await fetch("render.php?map=' . rawurlencode($selectedKey) . '", {method:"POST", body: fd});
         pv.innerHTML = await res.text();
       }
 
@@ -297,6 +323,7 @@ if ($rel === '') {
 
       initMonaco().then((ok) => {
         if (!ok) initFallback();
+        document.querySelector("[data-capability-link-picker]").disabled = false;
         render();
       });
 

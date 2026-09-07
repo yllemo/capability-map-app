@@ -11,7 +11,16 @@ Importen validerar hela filen och skapar en egen undermapp med Markdown-filer.
 `maturity` 1–5. Område sätts till `Importerade förmågor` och kan sedan redigeras.
 Länkar följer med. Organisation, kartbeskrivning och övriga originalfält bevaras
 i undermappens `source.json`; de ändrar inte appens globala inställningar.
-Befintliga förmågor skrivs inte över och samma JSON-karta kan inte importeras igen.
+Ange ett valfritt **ID-prefix**, exempelvis `cap-intra-`, för korta ID:n:
+`cap-intra-1`, `cap-intra-2` och så vidare. Ett avslutande bindestreck läggs till
+om det saknas. Numreringen börjar på 1 i filens ordning, oavsett originalets ID:n.
+Prefixet får innehålla små bokstäver, siffror och bindestreck, börja med en bokstav
+och vara högst 80 tecken. Tomt prefix behåller de automatiskt genererade ID:na.
+Originalets ID sparas fortfarande som `source_id`. Prefix kan även anges vid
+**+ Ny → Importera en förmåga från JSON** innan du väljer förmåga.
+
+Befintliga förmågor skrivs inte över och samma JSON-karta med samma prefix kan inte importeras igen.
+Om ett genererat ID redan finns i målkartan stoppas importen; välj då ett annat prefix.
 En ändrad JSON-karta räknas som en ny import, inte som en uppdatering.
 
 Knappen finns bara i editorn och importen använder editorns autentisering och
@@ -94,6 +103,22 @@ open http://localhost:8080/view/index.php
 Nedladdningsikonen bredvid **Redigera** hämtar förmågan som `.md`, inklusive
 hela originalets metadata och brödtext.
 
+### Interna länkar i Markdown-editorn
+
+Klicka på **Infoga förmågelänk** ovanför Markdown-editorn, sök på namn, ID eller
+karta och välj målet. Länktexten kan ändras; markerad text används som förslag.
+Länken infogas vid markören och kan ångras i Monaco. Även reserveditorn stöds.
+Spara förmågan som vanligt efter infogning.
+
+```markdown
+[Informationshantering](cap://content2/cap-info-001)
+```
+
+`cap://kartnyckel/förmåge-id` fungerar i förhandsvisningen och på detaljsidan,
+även om samma ID används i flera kartor. Inga domännamn eller installationssökvägar
+behöver lagras i Markdown. Befintliga `[Namn](cap-id)` och fristående `cap-id`
+fortsätter använda aktuell karta med appens vanliga uppslagning.
+
 ### Referenskort mellan kartor
 
 På **+ Ny → Länka en befintlig förmåga (referenskort)** väljer du en
@@ -155,6 +180,7 @@ php tests/frontmatter_empty_fields.php
 php tests/content_migration.php
 php tests/content_folders.php
 php tests/capability_references.php
+php tests/markdown_links.php
 node --check assets/overview.js
 ```
 

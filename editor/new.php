@@ -107,6 +107,9 @@ ob_start();
       <p class="muted">Samma format som Importera JSON. Välj en fil (högst 5 MB) och sedan en förmåga. Formuläret fylls i; inget sparas förrän du klickar på Skapa.</p>
       <form id="json-preview-form" enctype="multipart/form-data" action="preview_json.php" method="post">
         <?= csrf_field() ?>
+        <label for="json-id-prefix">ID-prefix (valfritt)</label>
+        <input class="input" id="json-id-prefix" name="id_prefix" placeholder="cap-intra-" maxlength="80" pattern="[a-z][a-z0-9-]*">
+        <p class="muted">cap-intra- ger cap-intra-1, cap-intra-2 osv. efter ordningen i JSON-filen. Du kan ändra ID i formuläret innan du sparar.</p>
         <label for="json-file">JSON-fil</label>
         <input class="input" type="file" id="json-file" name="json_file" accept=".json,application/json" required>
         <button class="btn btn--secondary" type="submit">Läs JSON</button>

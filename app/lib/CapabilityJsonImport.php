@@ -4,7 +4,12 @@ declare(strict_types=1);
 namespace App;
 
 final class CapabilityJsonImport {
-  public static function convert(string $json): array {
+  public static function convert(string $json, string $idPrefix = ''): array {
+    $idPrefix = trim($idPrefix);
+    if ($idPrefix !== '') {
+      if (!preg_match('/^[a-z][a-z0-9-]{0,79}$/D', $idPrefix)) throw new \InvalidArgumentException('ID-prefix får innehålla små bokstäver, siffror och bindestreck, börja med en bokstav och vara högst 80 tecken.');
+      $idPrefix = rtrim($idPrefix, '-') . '-';
+    }
     try {
       $data = json_decode(preg_replace('/^\xEF\xBB\xBF/', '', $json), true, 64, JSON_THROW_ON_ERROR);
     } catch (\JsonException $e) {
@@ -38,7 +43,7 @@ final class CapabilityJsonImport {
         if (!preg_match('~^[a-z][a-z0-9+.-]*:~i', $url)) $url = 'https://' . $url;
         if (!filter_var($url, FILTER_VALIDATE_URL) || !in_array(strtolower(parse_url($url, PHP_URL_SCHEME) ?? ''), ['http', 'https'], true)) throw new \InvalidArgumentException("Förmåga $row: länken måste vara en giltig HTTP- eller HTTPS-adress.");
       }
-      $id = 'cap-json' . $batch . '-' . $item['id'];
+      $id = $idPrefix !== '' ? $idPrefix . $row : 'cap-json' . $batch . '-' . $item['id'];
       $meta = [
         'id' => $id, 'name' => $item['title'], 'layer' => $layers[$item['layer']],
         'area' => 'Importerade förmågor', 'level' => 1, 'type' => 'verksamhetsformaga',
@@ -55,7 +60,8 @@ final class CapabilityJsonImport {
       if ($url !== '') $markdown .= "\n## Länk\n\n[Läs mer](" . str_replace(['(', ')'], ['%28', '%29'], $url) . ")\n";
       $files[$id . '.md'] = $markdown;
     }
-    return ['directory' => 'json-import-' . $batch, 'files' => $files, 'source' => $data];
+    $importKey = $idPrefix === '' ? $batch : substr(hash('sha256', $batch . ':' . $idPrefix), 0, 16);
+    return ['directory' => 'json-import-' . $importKey, 'files' => $files, 'source' => $data];
   }
 
   public static function save(array $import, string $contentDir): void {
@@ -63,7 +69,7 @@ final class CapabilityJsonImport {
     if (file_exists($target)) throw new \RuntimeException('Den här JSON-kartan har redan importerats. Inga filer ändrades.');
     $existing = (new CapabilityRepository($contentDir))->all();
     foreach ($existing as $cap) {
-      if (isset($import['files'][$cap->id . '.md'])) throw new \RuntimeException('En förmåga med samma ID finns redan. Inga filer ändrades.');
+      if (isset($import['files'][$cap->id . '.md'])) throw new \RuntimeException('ID ' . $cap->id . ' finns redan i målkartan. Välj ett annat prefix. Inga filer ändrades.');
     }
     // Stage next to the destination: storage/ may be on a different PVC/device.
     // Repository readers ignore this reserved directory until publication.

@@ -42,6 +42,25 @@ foreach (array_merge(['{', '{"capabilities":[]}'], array_map('json_encode', $bad
   throw new RuntimeException('Ogiltiga indata ska avvisas');
 }
 $directory = sys_get_temp_dir() . '/capmap-json-test-' . bin2hex(random_bytes(8));
+$numberedSource = $source;
+foreach ($numberedSource['capabilities'] as $i => &$item) $item['id'] = 100 + $i * 7;
+unset($item);
+$numbered = CapabilityJsonImport::convert(json_encode($numberedSource), 'cap-intra-');
+foreach (array_values($numbered['files']) as $i => $markdown) {
+  $meta = Frontmatter::parse($markdown)['meta'];
+  check($meta['id'] === 'cap-intra-' . ($i + 1), 'Egna ID:n ska numreras från 1 i filens ordning.');
+  check((int)$meta['source_id'] === 100 + $i * 7, 'Originalets ID ska bevaras separat.');
+}
+check($numbered === CapabilityJsonImport::convert(json_encode($numberedSource), ' cap-intra '), 'Prefix normaliseras med avslutande bindestreck.');
+check($numbered['directory'] !== CapabilityJsonImport::convert(json_encode($numberedSource), 'cap-other-')['directory'], 'Olika prefix ska få olika importmappar.');
+foreach (['../cap', 'CAP-', '1cap-', 'cap space', str_repeat('a', 81)] as $prefix) {
+  try {
+    CapabilityJsonImport::convert(json_encode($source), $prefix);
+  } catch (InvalidArgumentException $e) {
+    continue;
+  }
+  throw new RuntimeException('Ogiltigt prefix ska avvisas.');
+}
 mkdir($directory);
 try {
   mkdir($directory . '/.capmap-import-interrupted');
@@ -55,6 +74,18 @@ try {
     CapabilityJsonImport::save($result, $directory);
     throw new LogicException('Återimport får inte skriva över filer.');
   } catch (RuntimeException $e) {}
+  CapabilityJsonImport::save($numbered, $directory);
+  $numberedSource['capabilities'][0]['title'] = 'Ändrad titel';
+  $conflict = CapabilityJsonImport::convert(json_encode($numberedSource), 'cap-intra-');
+  $rejected = false;
+  try {
+    CapabilityJsonImport::save($conflict, $directory);
+  } catch (RuntimeException $e) {
+    $rejected = str_contains($e->getMessage(), 'cap-intra-');
+  }
+  check($rejected, 'Återanvänt prefix ska stoppas när ID redan finns.');
+  check(!file_exists($directory . '/' . $conflict['directory']), 'En ID-konflikt får inte skapa en importmapp.');
+  check(file_get_contents($directory . '/' . $numbered['directory'] . '/cap-intra-1.md') === $numbered['files']['cap-intra-1.md'], 'ID-konflikter får inte ändra befintliga filer.');
 } finally {
   // Only the uniquely named temporary test directory is removed.
   $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);

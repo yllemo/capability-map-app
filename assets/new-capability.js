@@ -15,6 +15,7 @@
     message.textContent = '';
   };
   upload.elements.json_file.addEventListener('change', reset);
+  upload.elements.id_prefix.addEventListener('input', reset);
   select.addEventListener('change', () => {
     description.textContent = items[Number(select.value)]?.meta.description || '';
   });
@@ -39,7 +40,7 @@
       items.forEach((item, index) => {
         const option = document.createElement('option');
         option.value = String(index);
-        option.textContent = `${item.meta.source_id} · ${item.meta.name}`;
+        option.textContent = `${item.meta.id} · ${item.meta.name}`;
         select.append(option);
       });
       choice.hidden = false;

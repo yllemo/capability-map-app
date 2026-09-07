@@ -110,68 +110,48 @@ final class Markdown {
   }
 
   private static function inline(string $s): string {
-    $s = htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-
-    // inline code `code` (must come before other formatting)
-    $s = preg_replace('/`(.+?)`/', '<code>$1</code>', $s);
-
-    // bold **text** or __text__
+    // Protect code and complete links before emphasis and automatic ID links.
+    $tokens = [];
+    $store = function(string $html) use (&$tokens): string {
+      $key = "\x1A" . count($tokens) . "\x1A";
+      $tokens[$key] = $html;
+      return $key;
+    };
+    $s = str_replace("\x1A", '', $s);
+    $escape = fn(string $value) => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $s = preg_replace_callback('/`([^`]+)`/', fn($m) => $store('<code>' . $escape($m[1]) . '</code>'), $s);
+    $s = preg_replace_callback('/\[((?:\\\\.|[^\]\\\\])+)\]\(([^\s)]+)\)/', function($m) use ($store, $escape, &$tokens) {
+      $label = preg_replace('/\\\\([\\\\\[\]])/', '$1', $m[1]);
+      $target = $m[2];
+      $internal = !preg_match('~^https?://~i', $target);
+      if (preg_match('~^cap://([^/]+)/(.+)$~i', $target, $parts)) {
+        $url = self::capUrl(rawurldecode($parts[2]), rawurldecode($parts[1]));
+      } elseif ($internal) {
+        $url = self::capUrl(preg_replace('/\.md$/i', '', $target));
+      } else {
+        $url = $target;
+      }
+      $labelHtml = strtr($escape($label), $tokens);
+      return $store('<a href="' . $escape($url) . '" rel="noopener"' . ($internal ? ' class="cap-link"' : '') . '>' . $labelHtml . '</a>');
+    }, $s);
+    $s = $escape($s);
     $s = preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $s);
     $s = preg_replace('/__(.+?)__/s', '<strong>$1</strong>', $s);
-
-    // strikethrough ~~text~~
     $s = preg_replace('/~~(.+?)~~/s', '<del>$1</del>', $s);
-
-    // italic *text* or _text_ (after bold to avoid conflicts)
     $s = preg_replace('/\*(.+?)\*/s', '<em>$1</em>', $s);
     $s = preg_replace('/_(.+?)_/s', '<em>$1</em>', $s);
-
-    // links [text](url)
-    // If target is not an absolute http(s) URL, treat it as a capability/file id.
-    $s = preg_replace_callback('/\[(.+?)\]\((.+?)\)/s', function($matches) {
-      $label = $matches[1];
-      $rawTarget = html_entity_decode($matches[2], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-      $target = trim($rawTarget);
-
-      if (!preg_match('/^https?:\/\//i', $target)) {
-        $id = preg_replace('/\.md$/i', '', $target);
-        $url = self::capUrl($id);
-        return '<a href="' . htmlspecialchars($url, ENT_QUOTES) . '" rel="noopener" class="cap-link">' . $label . '</a>';
-      }
-
-      return '<a href="' . htmlspecialchars($target, ENT_QUOTES) . '" rel="noopener">' . $label . '</a>';
-    }, $s);
-
-    // capability reference cap-xxx (only in text nodes, not inside HTML tags)
     $parts = preg_split('/(<[^>]+>)/', $s, -1, PREG_SPLIT_DELIM_CAPTURE);
-    if (is_array($parts)) {
-      foreach ($parts as $i => $part) {
-        if ($part === '' || $part[0] === '<') continue;
-        $parts[$i] = preg_replace_callback('/\b(cap-[a-z0-9\-]+)\b/i', function($matches) {
-          $capId = $matches[1];
-          $url = self::capUrl($capId);
-          return '<a href="' . htmlspecialchars($url, ENT_QUOTES) . '" class="cap-link">' . htmlspecialchars($capId) . '</a>';
-        }, $part);
-      }
-      $s = implode('', $parts);
+    foreach ($parts as $i => $part) {
+      if ($part === '' || $part[0] === '<') continue;
+      $parts[$i] = preg_replace_callback('/\b(cap-[a-z0-9\-]+)\b/i', fn($m) => '<a href="' . $escape(self::capUrl($m[1])) . '" class="cap-link">' . $escape($m[1]) . '</a>', $part);
     }
-
-    return $s;
+    return strtr(implode('', $parts), $tokens);
   }
 
-  private static function capUrl(string $id): string {
-    // Use base_path if available (from bootstrap.php)
-    if (function_exists('base_path')) {
-      $path = 'view/capability.php?id=' . rawurlencode($id);
-      if (function_exists('get_selected_content_key')) {
-        $map = (string)get_selected_content_key();
-        if ($map !== '') {
-          $path .= '&map=' . rawurlencode($map);
-        }
-      }
-      return base_path($path);
-    }
-    // Fallback for when base_path is not available
-    return '/view/capability.php?id=' . rawurlencode($id);
+  private static function capUrl(string $id, ?string $map = null): string {
+    if ($map === null && function_exists('get_selected_content_key')) $map = (string)get_selected_content_key();
+    $path = 'view/capability.php?id=' . rawurlencode($id);
+    if ($map !== null && $map !== '') $path .= '&map=' . rawurlencode($map);
+    return function_exists('base_path') ? base_path($path) : '/' . $path;
   }
 }
