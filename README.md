@@ -15,7 +15,9 @@ Befintliga förmågor skrivs inte över och samma JSON-karta kan inte importeras
 En ändrad JSON-karta räknas som en ny import, inte som en uppdatering.
 
 Knappen finns bara i editorn och importen använder editorns autentisering och
-CSRF-skydd. Både målkatalogen och `storage/` måste vara skrivbara för PHP.
+CSRF-skydd. Målkatalogen måste vara skrivbar för PHP. Tillfälliga importfiler
+skrivs där, på samma volym som resultatet, så att import fungerar även när
+`storage/` och `/content` ligger på olika volymer i OpenShift.
 
 Exempel på en JSON-fil:
 
@@ -107,11 +109,18 @@ redirect_id: cap-original-001
 ```
 
 Kortets namn, beskrivning, metadata, taggar, skikt och område hämtas från
-originalet vid visning. Klick öppnar originalets detaljsida. Kartnyckel och
+originalet vid visning. Referensen kan ha egna `layer`, `maturity`, `criticality`,
+`risk_level` och `level` i frontmatter. De ändrar kortets placering och nivåer
+utan att påverka originalet. Välj **Följ originalet** för att ta bort ett eget
+värde och återgå till arv. Mognaden styr färgen i den nya vyn; klassiska vyn
+använder kartans konfigurerade färgfält.
+
+Inloggade kan öppna **Kortinställningar** direkt från referenskortet i båda
+vyerna. Klick på kortets övriga innehåll öppnar originalets detaljsida. Kartnyckel och
 mål-ID används för att skilja likadana ID:n i olika kartor. Om originalet
 försvinner eller referenser bildar en loop visas en bruten referens.
 
-I editorn öppnas referensfilen på en separat sida där du kan ändra mål eller
+I editorn öppnas referensfilen på en separat sida där du kan ändra mål, egna nivåer eller
 ta bort referensen. Originalet påverkas inte. Vanlig metadataredigering är
 spärrad för referensfiler för att behålla deras minimala format.
 
@@ -412,6 +421,14 @@ med innehållet. Den innehåller `content_root` relativt applikationsroten och
 `content_dirs` med `folder`, `label` och `description` per karta. Alla vyer,
 editorn, import/export, AI och MCP får sökvägar via samma konfigurationsfunktioner.
 Nya kartkataloger skapas via **+ Folder** i editorn under innehållsroten.
+Via **Hantera folder** kan du ändra visningsnamn och katalognamn. Kartnyckeln
+behålls så att referenser fortsätter fungera. Samma sida erbjuder fullständig
+ZIP-backup och permanent radering av alla filer och undermappar efter att du
+skrivit kartans namn som bekräftelse. ZIP-backupen inkluderar alla vanliga filer,
+tomma kataloger och kartkonfiguration som arkivkommentar. Symboliska länkar
+kräver separat backup. Källor i andra kartor påverkas inte, men referenser som
+pekar in i den raderade kartan får ett saknat mål. Den sista kartan kan inte
+raderas förrän en annan skapats. Monterade kataloger kan lämnas kvar tomma.
 Befintliga kartposter bevaras i konfigurationen och den nya kartan öppnas direkt.
 Om kartorna redan ligger i egna undermappar under `/content` via `config/app.php`
 skapas JSON-konfigurationen automatiskt vid första nya katalogen. På äldre

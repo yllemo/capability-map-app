@@ -21,11 +21,32 @@ final class CapabilityReference {
     throw new \RuntimeException('Referenskedjan är för lång.');
   }
 
-  public static function markdown(string $id, string $selection, array $dirs): string {
+  public static function overrides(array $input, array $taxonomy): array {
+    $out = [];
+    foreach (['layer', 'maturity', 'criticality', 'risk_level', 'level'] as $key) {
+      $value = $input[$key] ?? '';
+      if ($value === '') continue;
+      if (!is_scalar($value)) throw new \RuntimeException('Ogiltig inställning för ' . $key);
+      if ($key === 'layer') {
+        if (!isset($taxonomy['layers'][(string)$value])) throw new \RuntimeException('Välj ett giltigt skikt.');
+        $out[$key] = (string)$value;
+      } else {
+        $allowed = $key === 'level' ? ($taxonomy['levels'] ?? [1, 2, 3]) : [0, 1, 2, 3, 4, 5];
+        if (!in_array((string)$value, array_map('strval', $allowed), true)) throw new \RuntimeException('Ogiltig nivå för ' . $key);
+        $out[$key] = (int)$value;
+      }
+    }
+    return $out;
+  }
+
+  public static function markdown(string $id, string $selection, array $dirs, array $overrides = []): string {
     $choice = json_decode($selection, true);
     if (!is_array($choice) || count($choice) !== 2) throw new \RuntimeException('Välj en originalförmåga.');
     $target = self::resolve(['redirect_map' => $choice[0] ?? null, 'redirect_id' => $choice[1] ?? null], $dirs);
     $meta = ['id' => $id, 'redirect_map' => $target['map'], 'redirect_id' => $target['cap']->id];
+    foreach (['layer', 'maturity', 'criticality', 'risk_level', 'level'] as $key) {
+      if (array_key_exists($key, $overrides)) $meta[$key] = $overrides[$key];
+    }
     $text = "---\n";
     foreach ($meta as $key => $value) $text .= $key . ': ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
     return $text . "---\n";

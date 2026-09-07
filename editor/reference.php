@@ -8,6 +8,10 @@ $error = '';
 $notice = '';
 try {
   $rel = $_GET['file'] ?? '';
+  if ($rel === '' && is_string($_GET['id'] ?? null)) {
+    $record = (new App\CapabilityRepository(get_content_dir()))->rawById($_GET['id']);
+    if ($record) $rel = ltrim(substr(str_replace('\\', '/', $record['cap']->path), strlen(rtrim(str_replace('\\', '/', get_content_dir()), '/'))), '/');
+  }
   if (!is_string($rel) || $rel === '') throw new RuntimeException('Välj en referensfil.');
   $abs = App\PathGuard::safeJoin(get_content_dir(), $rel);
   if (!is_file($abs)) throw new RuntimeException('Referensfilen saknas.');
@@ -20,7 +24,10 @@ try {
     if (!is_string($token) || !csrf_verify($token)) throw new RuntimeException('Ladda om sidan och försök igen.');
     $selection = $_POST['reference_target'] ?? '';
     if (!is_string($selection)) throw new RuntimeException('Välj ett mål.');
-    $text = App\CapabilityReference::markdown($meta['id'], $selection, $dirs);
+    $input = $_POST['reference_options'] ?? [];
+    if (!is_array($input)) throw new RuntimeException('Ogiltiga kortinställningar.');
+    $overrides = App\CapabilityReference::overrides($input, cfg('taxonomy'));
+    $text = App\CapabilityReference::markdown($meta['id'], $selection, $dirs, $overrides);
     // Keep the old file intact if writing the replacement fails.
     $temp = $abs . '.' . bin2hex(random_bytes(8)) . '.tmp';
     if (@file_put_contents($temp, $text, LOCK_EX) !== strlen($text) || !@rename($temp, $abs)) {
@@ -44,11 +51,13 @@ ob_start();
   <?php try { $target = App\CapabilityReference::resolve($meta, $dirs); ?>
     <p><a class="btn btn--secondary" href="<?= h(base_path('view/capability.php?map=' . rawurlencode($target['map']) . '&id=' . rawurlencode($target['cap']->id))) ?>">Öppna original: <?= h($target['cap']->name) ?></a></p>
   <?php } catch (RuntimeException $e) { ?><p role="alert"><?= h($e->getMessage()) ?> Välj ett nytt mål nedan.</p><?php } ?>
-  <form method="post" class="grid" style="gap:12px">
+  <form method="post" action="reference.php?map=<?= h(rawurlencode($selectedKey)) ?>&amp;file=<?= h(rawurlencode($rel)) ?>" class="grid" style="gap:12px">
     <?= csrf_field() ?><label for="reference-target">Originalförmåga</label>
     <select class="select" id="reference-target" name="reference_target" required><option value="">Välj mål…</option>
       <?php foreach (App\CapabilityReference::choices($dirs) as $choice): ?><option value="<?= h(json_encode([$choice['map'], $choice['id']], JSON_UNESCAPED_UNICODE)) ?>" <?= ($meta['redirect_map'] === $choice['map'] && ($meta['redirect_id'] ?? '') === $choice['id']) ? 'selected' : '' ?>><?= h($choice['label'] . ' · ' . $choice['name'] . ' · ' . $choice['id']) ?></option><?php endforeach; ?>
-    </select><button class="btn btn--primary" type="submit">Spara mål</button>
+    </select>
+    <?php $referenceValues = $meta; require __DIR__ . '/../app/templates/reference_options.php'; ?>
+    <button class="btn btn--primary" type="submit">Spara referenskort</button>
   </form>
   <pre style="overflow:auto"><?= h($raw) ?></pre>
   <form method="post" action="delete.php?map=<?= h(rawurlencode($selectedKey)) ?>" onsubmit="return confirm('Ta bort referenskortet? Originalet påverkas inte.');">

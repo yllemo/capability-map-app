@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../app/bootstrap.php';
+require __DIR__ . '/../editor/_auth.php';
 $mapInterface = 'classic';
 require __DIR__ . '/../app/map_interface.php';
 header('Content-Type: text/html; charset=UTF-8');
@@ -297,9 +297,10 @@ function sectionChrome(string $layerKey, array $tax): array {
                 $border = maturityColorClass($m ?: 1);
                 $capHref = base_path('view/capability.php?id=' . rawurlencode($cap->id) . '&map=' . rawurlencode($selectedKey));
               ?>
-<a href="<?= h($capHref) ?>"
+<div
    class="capability-card cap-card cap-maturity-<?= h((string)$m) ?> block p-2.5 rounded-md border border-gray-200/70 dark:border-neutral-700/70 border-l-[5px] <?= h($border) ?> shadow-sm hover:shadow-md"
    data-maturity="<?= h((string)$m) ?>">
+<a href="<?= h($capHref) ?>" style="display:block;color:inherit;text-decoration:none">
   <div class="flex justify-between items-start gap-3">
     <?php if (isset($cap->meta['redirect_map'])): ?><span class="text-xs text-gray-500" title="Länkad förmåga">↗</span><?php endif; ?>
     <h4 class="font-semibold text-sm text-gray-900 dark:text-neutral-50 leading-snug pr-2">
@@ -343,6 +344,8 @@ function sectionChrome(string $layerKey, array $tax): array {
     </div>
   <?php endif; ?>
 </a>
+<?php require __DIR__ . '/../app/templates/reference_edit_link.php'; ?>
+</div>
 <?php endforeach; ?>
             </div>
           </div>

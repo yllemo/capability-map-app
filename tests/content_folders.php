@@ -29,6 +29,20 @@ try {
     } catch (RuntimeException | InvalidArgumentException $e) {}
     checkFolder(file_get_contents($path) === $saved, 'Avvisat anrop ändrade konfigurationen.');
   }
+  ContentFolders::manage($project, 'new-map', 'rename', ['label' => 'Nytt namn', 'folder' => 'renamed']);
+  $renamed = json_decode(file_get_contents($path), true);
+  checkFolder(isset($renamed['content_dirs']['new-map']) && $renamed['content_dirs']['new-map']['folder'] === 'renamed', 'Namnbyte måste behålla kartnyckeln.');
+  mkdir($project . '/content/renamed/nested');
+  file_put_contents($project . '/content/renamed/nested/data.json', '{}');
+  try {
+    ContentFolders::manage($project, 'new-map', 'delete', ['confirmation' => 'Fel namn']);
+    throw new LogicException('Radering utan rätt bekräftelse accepterades.');
+  } catch (RuntimeException $e) {}
+  checkFolder(is_file($project . '/content/renamed/nested/data.json'), 'Felaktig bekräftelse får inte radera filer.');
+  ContentFolders::manage($project, 'new-map', 'delete', ['confirmation' => 'Nytt namn']);
+  checkFolder(!file_exists($project . '/content/renamed/nested/data.json'), 'Alla filtyper ska raderas.');
+  checkFolder(!isset(json_decode(file_get_contents($path), true)['content_dirs']['new-map']), 'Raderad karta ska tas bort ur konfigurationen.');
+  checkFolder(is_dir($project . '/content/existing'), 'Andra kartor får inte raderas.');
   // A blocked config destination must roll back only the newly created folder.
   unlink($path);
   mkdir($path);

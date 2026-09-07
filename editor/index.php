@@ -67,6 +67,7 @@ foreach ($it as $f) {
   $ext = strtolower($f->getExtension());
   if ($ext !== 'md' && $ext !== 'markdown') continue;
   $relPath = ltrim(str_replace($contentDir, '', $f->getPathname()), DIRECTORY_SEPARATOR);
+  if (preg_match('~(^|[/\\\\])\.capmap-import-[^/\\\\]+([/\\\\]|$)~', $relPath)) continue;
   $files[] = str_replace(DIRECTORY_SEPARATOR, '/', $relPath);
 }
 sort($files);
@@ -88,6 +89,7 @@ if (count($contentDirs) > 1) {
 }
 $sidebar .= '</div>';
 $sidebar .= '<div style="display:flex;flex-direction:column;gap:6px;max-height:65vh;overflow:auto">';
+$sidebar .= '<a class="btn btn--ghost" href="folder.php?map='.rawurlencode($selectedKey).'">Hantera folder</a>';
 foreach ($files as $f) {
   $active = ($f === $rel) ? 'style="border-color: color-mix(in srgb, var(--primary) 60%, var(--border))"' : '';
   $sidebar .= '<a class="tile" '.$active.' href="index.php?file='.rawurlencode($f).'"><div class="tile__title" style="font-size:14px">'.h(basename($f)).'</div><div class="tile__desc" style="margin:0">'.h(dirname($f)).'</div></a>';

@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../app/bootstrap.php';
+require __DIR__ . '/../editor/_auth.php';
 $mapInterface = 'new';
 require __DIR__ . '/../app/map_interface.php';
 header('Content-Type: text/html; charset=UTF-8');
@@ -87,7 +87,8 @@ $layerChrome = [
           $tags = $cap->get('tags', []); if (!is_array($tags)) $tags = [$tags];
           $search = $cap->name . ' ' . $cap->description . ' ' . $cap->id . ' ' . $area . ' ' . json_encode($tags, JSON_UNESCAPED_UNICODE);
         ?>
-        <a class="cap-card maturity-<?= $m ?>" data-capability data-search="<?= h($search) ?>" data-layer="<?= h($layer) ?>" data-area="<?= h($area) ?>" data-maturity="<?= $m ?>" href="<?= h(base_path('view/capability.php?id=' . rawurlencode($cap->id) . '&map=' . rawurlencode($selectedKey))) ?>">
+        <article class="cap-card maturity-<?= $m ?>" data-capability data-search="<?= h($search) ?>" data-layer="<?= h($layer) ?>" data-area="<?= h($area) ?>" data-maturity="<?= $m ?>">
+        <a style="display:flex;flex-direction:column;flex:1;color:inherit;text-decoration:none" href="<?= h(base_path('view/capability.php?id=' . rawurlencode($cap->id) . '&map=' . rawurlencode($selectedKey))) ?>">
           <span class="overview-card-id" data-card-field="id" hidden><?= h($cap->id) ?></span>
           <?php if (isset($cap->meta['redirect_map'])): ?><span class="overview-card-context" title="Visar originalförmågan från en annan plats">↗ Länkad förmåga</span><?php endif; ?>
           <h4><?= h($cap->name) ?></h4><p class="card-desc" data-card-field="description"><?= h($cap->description ?: 'Ingen beskrivning angiven.') ?></p>
@@ -107,6 +108,8 @@ $layerChrome = [
           </div><?php endif; ?>
           <div class="card-bottom" data-card-field="maturity"><span class="status-badge"><?= h($labels[$m]) ?></span></div>
         </a>
+        <?php require __DIR__ . '/../app/templates/reference_edit_link.php'; ?>
+        </article>
         <?php endforeach; ?>
       </div></section>
       <?php endforeach; ?>

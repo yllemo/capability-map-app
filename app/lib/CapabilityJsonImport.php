@@ -65,9 +65,10 @@ final class CapabilityJsonImport {
     foreach ($existing as $cap) {
       if (isset($import['files'][$cap->id . '.md'])) throw new \RuntimeException('En förmåga med samma ID finns redan. Inga filer ändrades.');
     }
-    // Stage outside the content directory so readers only see a complete import.
-    $stage = __DIR__ . '/../../storage/json-import-' . bin2hex(random_bytes(8)) . '.tmp';
-    if (!mkdir($stage, 0775)) throw new \RuntimeException('Kunde inte skapa importmappen. Kontrollera skrivrättigheter.');
+    // Stage next to the destination: storage/ may be on a different PVC/device.
+    // Repository readers ignore this reserved directory until publication.
+    $stage = rtrim($contentDir, '/\\') . DIRECTORY_SEPARATOR . '.capmap-import-' . bin2hex(random_bytes(8));
+    if (!@mkdir($stage, 0775)) throw new \RuntimeException('Kunde inte skapa importmappen i målkartan. Kontrollera skrivrättigheter.');
     $created = [];
     try {
       $files = $import['files'];
@@ -75,18 +76,18 @@ final class CapabilityJsonImport {
       foreach ($files as $name => $text) {
         $path = $stage . DIRECTORY_SEPARATOR . $name . '.tmp';
         $created[] = $path;
-        if (file_put_contents($path, $text, LOCK_EX) !== strlen($text)) throw new \RuntimeException('Kunde inte skriva importen.');
+        if (@file_put_contents($path, $text, LOCK_EX) !== strlen($text)) throw new \RuntimeException('Kunde inte skriva importen.');
       }
       // All contents have been written successfully at this point.
       foreach ($created as $i => $path) {
         $final = substr($path, 0, -4);
-        if (!rename($path, $final)) throw new \RuntimeException('Kunde inte färdigställa importen.');
+        if (!@rename($path, $final)) throw new \RuntimeException('Kunde inte färdigställa importen.');
         $created[$i] = $final;
       }
-      if (file_exists($target) || !rename($stage, $target)) throw new \RuntimeException('Kunde inte färdigställa importen; kartan kan redan ha importerats.');
+      if (file_exists($target) || !@rename($stage, $target)) throw new \RuntimeException('Kunde inte färdigställa importen; kartan kan redan ha importerats.');
     } catch (\Throwable $e) {
-      foreach ($created as $path) if (is_file($path)) unlink($path);
-      rmdir($stage);
+      foreach ($created as $path) if (is_file($path)) @unlink($path);
+      @rmdir($stage);
       throw $e;
     }
   }

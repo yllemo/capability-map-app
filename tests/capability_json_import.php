@@ -2,6 +2,8 @@
 declare(strict_types=1);
 require __DIR__ . '/../app/lib/CapabilityJsonImport.php';
 require __DIR__ . '/../app/lib/Frontmatter.php';
+require __DIR__ . '/../app/lib/Capability.php';
+require __DIR__ . '/../app/lib/CapabilityRepository.php';
 
 use App\CapabilityJsonImport;
 use App\Frontmatter;
@@ -38,5 +40,25 @@ foreach (array_merge(['{', '{"capabilities":[]}'], array_map('json_encode', $bad
     continue;
   }
   throw new RuntimeException('Ogiltiga indata ska avvisas');
+}
+$directory = sys_get_temp_dir() . '/capmap-json-test-' . bin2hex(random_bytes(8));
+mkdir($directory);
+try {
+  mkdir($directory . '/.capmap-import-interrupted');
+  file_put_contents($directory . '/.capmap-import-interrupted/partial.md', "---\nid: partial\nname: Partial\n---\n");
+  $repo = new App\CapabilityRepository($directory);
+  check($repo->all() === [], 'Ofullständiga importer ska inte visas.');
+  CapabilityJsonImport::save($result, $directory);
+  check(count($repo->all()) === 5, 'Importerade filer ska bli tillgängliga i målkartan.');
+  check(is_file($directory . '/' . $result['directory'] . '/source.json'), 'Originalinformationen ska sparas.');
+  try {
+    CapabilityJsonImport::save($result, $directory);
+    throw new LogicException('Återimport får inte skriva över filer.');
+  } catch (RuntimeException $e) {}
+} finally {
+  // Only the uniquely named temporary test directory is removed.
+  $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);
+  foreach ($iterator as $entry) { if ($entry->isDir()) rmdir($entry->getPathname()); else unlink($entry->getPathname()); }
+  rmdir($directory);
 }
 echo "JSON import tests passed\n";

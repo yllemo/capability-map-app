@@ -102,7 +102,9 @@ if ($zipResult !== true) {
   exit;
 }
 
-// Recursively add all markdown files
+// Full backups include all regular files, empty folders and map configuration.
+$fullBackup = ($_GET['full'] ?? '') === '1';
+if ($fullBackup) $zip->setArchiveComment(json_encode(['map_key' => $key, 'configuration' => $dirConfig], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 $added = 0;
 $iterator = new RecursiveIteratorIterator(
   new RecursiveDirectoryIterator($contentDir, FilesystemIterator::SKIP_DOTS),
@@ -110,10 +112,21 @@ $iterator = new RecursiveIteratorIterator(
 );
 
 foreach ($iterator as $file) {
+  if ($fullBackup && $file->isLink()) {
+    $zip->close(); @unlink($tempZip); http_response_code(400);
+    echo 'Backup avbruten: katalogen innehåller symboliska länkar. Säkerhetskopiera dem separat innan radering.';
+    exit;
+  }
+  if ($fullBackup && $file->isDir()) {
+    $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($file->getPathname(), strlen(rtrim($contentDir, '/\\')) + 1));
+    if (!$zip->addEmptyDir($relative)) { $zip->close(); @unlink($tempZip); http_response_code(500); echo 'Backup failed'; exit; }
+    $added++;
+    continue;
+  }
   if (!$file->isFile()) continue;
 
   $ext = strtolower($file->getExtension());
-  if ($ext !== 'md' && $ext !== 'markdown') continue;
+  if (!$fullBackup && $ext !== 'md' && $ext !== 'markdown') continue;
 
   // Get relative path for the zip archive
   $filePath = $file->getPathname();
@@ -123,10 +136,13 @@ foreach ($iterator as $file) {
   // Add file to zip
   if ($zip->addFile($filePath, $relativePath)) {
     $added++;
+  } elseif ($fullBackup) {
+    $zip->close(); @unlink($tempZip); http_response_code(500); echo 'Backup failed'; exit;
   }
 }
 
-$zip->close();
+if ($fullBackup && $added === 0) { $zip->addEmptyDir($key); $added++; }
+if (!$zip->close()) { @unlink($tempZip); http_response_code(500); echo 'Failed to finish ZIP backup'; exit; }
 
 // Check if any files were added
 if ($added === 0) {

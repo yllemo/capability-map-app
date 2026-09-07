@@ -21,6 +21,13 @@ try {
   $repo = new CapabilityRepository($root . '/a', $dirs);
   $card = $repo->all()[0];
   referenceCheck($card->id === 'cap-ref-test' && $card->name === 'Original' && $card->get('maturity') === 4, 'Kortet ska hämta originalets innehåll men ha eget ID.');
+  $overrides = CapabilityReference::overrides(['layer' => 'ledning_styrning', 'maturity' => '2', 'criticality' => '5', 'level' => '1'], ['layers' => ['ledning_styrning' => 'Styrande']]);
+  file_put_contents($root . '/a/ref.md', CapabilityReference::markdown('cap-ref-test', '["b","cap-original"]', $dirs, $overrides));
+  $custom = $repo->all()[0];
+  referenceCheck($custom->layer === 'ledning_styrning' && $custom->get('maturity') === 2 && $custom->get('criticality') === 5, 'Referensens egna värden måste användas.');
+  referenceCheck((new CapabilityRepository($root . '/b', $dirs))->byId('cap-original')['cap']->get('maturity') === 4, 'Originalet får inte ändras.');
+  file_put_contents($root . '/a/ref.md', $reference);
+  referenceCheck($repo->all()[0]->get('maturity') === 4, 'Följ originalet ska återställa arv.');
   file_put_contents($root . '/b/original.md', str_replace('name: Original', 'name: Ändrat namn', $original));
   referenceCheck($repo->all()[0]->name === 'Ändrat namn', 'Ändringar i originalet måste slå igenom.');
   $target = CapabilityReference::resolve($meta, $dirs);

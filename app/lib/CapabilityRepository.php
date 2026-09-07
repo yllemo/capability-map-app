@@ -52,12 +52,15 @@ final class CapabilityRepository {
     try {
       $target = CapabilityReference::resolve($meta, $this->contentDirs);
       $display = $target['cap']->meta;
+      foreach (['layer', 'maturity', 'criticality', 'risk_level', 'level'] as $key) {
+        if (array_key_exists($key, $meta) && $meta[$key] !== '') $display[$key] = $meta[$key];
+      }
       $display['id'] = $meta['id'];
       $display['redirect_map'] = $target['map'];
       $display['redirect_id'] = $target['cap']->id;
       return new Capability($display, $file);
     } catch (\RuntimeException $e) {
-      return new Capability(array_merge($meta, ['name' => 'Bruten referens', 'description' => $e->getMessage(), 'layer' => 'verksamhetsstod', 'area' => 'Referenser']), $file);
+      return new Capability(array_merge(['layer' => 'verksamhetsstod', 'area' => 'Referenser'], $meta, ['name' => 'Bruten referens', 'description' => $e->getMessage()]), $file);
     }
   }
 
@@ -65,7 +68,11 @@ final class CapabilityRepository {
   private function iterateMarkdownFiles(string $dir): array {
     $out = [];
     if (!is_dir($dir)) return $out;
-    $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
+    $entries = new \RecursiveCallbackFilterIterator(
+      new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+      fn($entry) => !($entry->isDir() && str_starts_with($entry->getFilename(), '.capmap-import-'))
+    );
+    $it = new \RecursiveIteratorIterator($entries);
     foreach ($it as $f) {
       /** @var \SplFileInfo $f */
       if (!$f->isFile()) continue;

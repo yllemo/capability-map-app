@@ -20,7 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $selection = $_POST['reference_target'] ?? '';
       if (!is_string($selection)) throw new RuntimeException('Välj en originalförmåga.');
       $referenceId = 'cap-ref-' . bin2hex(random_bytes(8));
-      $text = App\CapabilityReference::markdown($referenceId, $selection, get_content_dirs());
+      $input = $_POST['reference_options'] ?? [];
+      if (!is_array($input)) throw new RuntimeException('Ogiltiga kortinställningar.');
+      $overrides = App\CapabilityReference::overrides($input, $tax);
+      $text = App\CapabilityReference::markdown($referenceId, $selection, get_content_dirs(), $overrides);
       $file = 'references/' . $referenceId . '.md';
       $abs = PathGuard::safeJoin($contentDir, $file);
       if (!is_dir(dirname($abs)) && !@mkdir(dirname($abs), 0775, true)) throw new RuntimeException('Kunde inte skapa referenskatalogen.');
@@ -85,7 +88,7 @@ ob_start();
     <?php if ($error): ?><p role="alert"><?= h($error) ?></p><?php endif; ?>
     <details style="margin-bottom:20px" <?= ($_POST['creation_mode'] ?? '') === 'reference' ? 'open' : '' ?>>
       <summary>Länka en befintlig förmåga (referenskort)</summary>
-      <p class="muted">Välj originalet från någon av kartorna. Kortet följer originalets innehåll och skikt. Klick på kortet öppnar originalet. Endast en liten Markdown-fil med omstyrningen sparas i den aktuella kartan.</p>
+      <p class="muted">Välj originalet från någon av kartorna. Kortet följer originalets innehåll. Du kan välja egna skikt och nivåer nedan. Klick på kortet öppnar originalet. Endast omstyrningen och dina egna inställningar sparas i den aktuella kartan.</p>
       <form method="post" action="new.php?map=<?= h(rawurlencode($selectedKey)) ?>" class="grid" style="gap:10px">
         <?= csrf_field() ?><input type="hidden" name="creation_mode" value="reference">
         <label for="reference-target">Originalförmåga (karta · namn · ID)</label>
@@ -95,6 +98,7 @@ ob_start();
           <option value="<?= h(json_encode([$choice['map'], $choice['id']], JSON_UNESCAPED_UNICODE)) ?>"><?= h($choice['label'] . ' · ' . $choice['name'] . ' · ' . $choice['id']) ?></option>
           <?php endforeach; ?>
         </select>
+        <?php $referenceValues = []; require __DIR__ . '/../app/templates/reference_options.php'; ?>
         <button class="btn btn--primary" type="submit">Skapa referenskort</button>
       </form>
     </details>
