@@ -46,6 +46,12 @@ if ($key === '') {
   exit;
 }
 
+if (!can_read_map($key)) {
+  http_response_code(403);
+  echo json_encode(['success' => false, 'error' => 'Du har inte behörighet att läsa den kartan']);
+  exit;
+}
+
 if (!set_content_dir($key)) {
   http_response_code(400);
   echo json_encode(['success' => false, 'error' => 'Invalid directory key']);

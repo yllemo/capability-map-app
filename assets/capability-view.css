@@ -1,0 +1,23 @@
+/* Capability detail page, new interface. Builds on overview.css's tokens
+   (colors, .site-header, .brand, .eyebrow, .status-badge, .overview-card-*)
+   so it stays visually consistent with the new map view. */
+.cap-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
+.cap-article { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 26px 28px; box-shadow: var(--shadow); min-width: 0; }
+.cap-aside { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; box-shadow: var(--shadow); position: sticky; top: 20px; }
+.cap-aside-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.cap-aside-head h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; }
+.cap-id-badge { font: 11px/1.4 ui-monospace, monospace; color: var(--muted); overflow-wrap: anywhere; }
+.cap-maturity-row { margin-bottom: 14px; }
+.meta-list { margin: 0 0 14px; font-size: 12px; }
+.meta-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.meta-row:last-child { border-bottom: 0; }
+.meta-row dt { margin: 0; color: var(--muted); flex-shrink: 0; }
+.meta-row dd { margin: 0; text-align: right; color: var(--text); overflow-wrap: anywhere; min-width: 0; }
+
+@media (max-width: 900px) {
+  .cap-layout { grid-template-columns: 1fr; }
+  .cap-aside { position: static; }
+}
+@media print {
+  .site-header nav, .skip-link { display: none; }
+}

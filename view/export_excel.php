@@ -15,9 +15,9 @@ $selectedDir = get_content_dir();
 $contentDirs = get_content_dirs();
 
 if ($scope === 'all') {
-    // Export from all content directories
+    // Export from every content directory the current visitor may read
     $caps = [];
-    foreach ($contentDirs as $key => $dirInfo) {
+    foreach (readable_content_dirs() as $key => $dirInfo) {
         $repo = new CapabilityRepository($dirInfo['path']);
         $dirCaps = $repo->all();
         // Add directory info to each capability for reference
@@ -29,6 +29,7 @@ if ($scope === 'all') {
     $dirLabel = 'alla_kataloger';
 } else {
     // Export only from current directory
+    require_read($selectedKey);
     $repo = new CapabilityRepository($selectedDir);
     $caps = $repo->all();
     $dirLabel = $contentDirs[$selectedKey]['label'] ?? $selectedKey;

@@ -6,6 +6,11 @@ if (!is_authed()) {
   echo json_encode(['success' => false, 'error' => 'Logga in i editorn igen.']);
   exit;
 }
+if (!is_admin()) {
+  http_response_code(403);
+  echo json_encode(['success' => false, 'error' => 'Den här åtgärden kräver behörighet att redigera alla förmågekartor.']);
+  exit;
+}
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   http_response_code(405);
   echo json_encode(['success' => false, 'error' => 'Method not allowed']);

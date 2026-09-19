@@ -150,9 +150,11 @@ ta bort referensen. Originalet påverkas inte. Vanlig metadataredigering är
 spärrad för referensfiler för att behålla deras minimala format.
 
 ### Editor (`/editor/index.php`)
-- ✏️ Markdown-editor med live preview
-- 📝 YAML frontmatter-redigering
-- ➕ Skapa nya capabilities
+- 🎨 Samma nya gränssnitt som kartans nya vy (`site-header`, ljust/mörkt tema, kort-baserad layout)
+- 🔍 Sökbar förmågelista i sidopanelen – filtrera på namn, ID, område eller filväg medan du skriver
+- ✏️ Markdown-editor (Monaco) med live preview
+- 📝 YAML frontmatter-redigering i tydligt grupperade fält (Identitet, Klassificering, Ägarskap & status)
+- ➕ Skapa nya capabilities (`/editor/new.php`), inklusive referenskort och JSON-import
 - 🗑️ Radera filer med bekräftelse
 - ✏️ Byt namn på filer
 - 💾 Ladda ner enskilda filer eller hela foldern som ZIP
@@ -165,6 +167,16 @@ spärrad för referensfiler för att behålla deras minimala format.
   välja en förmåga ur filen och fylla i formuläret. Granska och ändra uppgifterna
   innan du klickar på **Skapa**. Beskrivning, mognad, länk och Markdown följer med;
   övriga förmågor i JSON-filen importeras inte.
+
+### AI Editor (`/ai/index.php`)
+
+Samma nya gränssnitt och sökbara förmågelista som `/editor/index.php`, men med
+ett AI-drivet redigeringsflöde: skriv en instruktion (t.ex. "Förtydliga
+beskrivningen och föreslå bättre taggar"), klicka **✨ Kör AI** och granska
+resultatet i Markdown-fältet innan du sparar. Systemprompten kan ses och
+justeras per körning via **Visa/redigera systemprompt**. AI-anropen går via
+`OPENAI_API_KEY` (se [Första gången](#första-gången)) och exponerar samma
+verktyg som MCP-servern (`/mcp/index.php`) för att slå upp andra förmågor.
 
 ### Gemensam favicon
 
@@ -315,13 +327,56 @@ updated: 2025-12-30
 # Lönehantering
 
 Markdown-innehåll här med full support för:
-- Listor (ordered och unordered)
+- Listor (ordered och unordered, även nästlade)
 - **Fetstil** och *kursiv*
 - `Kod` och kodblock
 - > Citat
 - [Länkar](https://example.com)
+- Tabeller och Mermaid-diagram (se [Markdown-stöd](#markdown-stöd) nedan)
 - Auto-linking till andra capabilities (cap-hr-002)
 ```
+
+## Markdown-stöd
+
+Markdown-motorn (`app/lib/Markdown.php`) är ett litet, beroendefritt bibliotek
+(ingen composer/vendor krävs) som täcker vanlig Markdown-syntax:
+
+- **Rubriker** – `# H1`–`###### H6` samt setext-rubriker (`Titel` följt av `===`/`---`)
+- **Textformatering** – `**fet**`, `*kursiv*`, `~~genomstruken~~`, `` `kod` ``
+- **Listor** – punkt- och nummerlistor, nästlade flera nivåer, flera stycken
+  per punkt och att-göra-listor (`- [ ]` / `- [x]`)
+- **Citat** – `>` med stöd för flera stycken i samma citat
+- **Kodblock** – ` ``` ` med språktagg (t.ex. ` ```php `)
+- **Bilder** – `![alt](url "valfri titel")`
+- **Länkar** – vanliga `[text](url)`, `<https://…>`-autolänkar, fristående
+  URL:er länkas automatiskt, samt appens egna `cap://karta/id`- och
+  `cap-xxx`-länkar (se [Interna länkar i Markdown-editorn](#interna-länkar-i-markdown-editorn))
+- **Horisontella linjer** – `---`, `***` eller `___`
+- **Tabeller (GFM)** – med kolumnjustering:
+
+  ```markdown
+  | Förmåga        | Skikt      | Mognad |
+  | :------------- | :--------: | -----: |
+  | Kundservice    | Core       |      4 |
+  | Orderhantering | Core       |      3 |
+  ```
+
+- **Mermaid-diagram** – fenced kodblock med språket `mermaid` renderas som ett
+  levande diagram i förmågans nya detaljvy (`/view/capability_new.php`),
+  laddat via `mermaid@latest` från jsDelivr och anpassat efter ljust/mörkt tema:
+
+  ````markdown
+  ```mermaid
+  graph TD
+    A[Order mottagen] --> B{Giltig?}
+    B -- Ja --> C[Plockning]
+    B -- Nej --> D[Avvisad]
+  ```
+  ````
+
+  Diagrammet laddas bara på sidor som faktiskt innehåller ett `mermaid`-block.
+  I andra vyer (klassisk detaljvy, editorns förhandsvisning) visas
+  diagramkoden som vanlig kod tills den öppnas i den nya detaljvyn.
 
 ## 📊 Maturity & Criticality
 
@@ -363,6 +418,30 @@ Indikerar hur viktig förmågan är för verksamheten:
 **Tips**: Använd maturity för operativ utveckling och criticality för strategisk prioritering.
 
 ## 🆕 Senaste uppdateringar
+
+### Nytt gränssnitt för Editor, AI Editor och Ny förmåga
+
+- `/editor/index.php`, `/ai/index.php` och `/editor/new.php` har byggts om för
+  att matcha kartans nya vy (`view/overview.php`): samma header, korttyper och
+  färgtoner, istället för den äldre mörka panel-stilen.
+- Editorns sidopanel visar nu en **sökbar** förmågelista (namn, ID, område
+  eller filväg) – tidigare listades bara filnamn.
+- Fälten i redigeringsformuläret är grupperade i tydliga sektioner (Identitet,
+  Klassificering, Ägarskap & status, Innehåll) med Spara/Raw edit-knapparna
+  direkt synliga överst.
+
+### Utökat Markdown-stöd, tabeller och Mermaid-diagram
+
+- Markdown-motorn (`app/lib/Markdown.php`) skrevs om för bättre stöd av vanlig
+  syntax: nästlade listor, att-göra-listor, citat med flera stycken, korrekt
+  ihopslagna flerradiga stycken, bilder och autolänkar.
+- **Tabeller (GFM)** med kolumnjustering renderas nu med en polerad, kortbaserad
+  stil (rundade hörn, rubrikfärg, zebra-rader, hover) i både ljust och mörkt
+  läge.
+- **Mermaid-diagram** (` ```mermaid `-kodblock) renderas som levande SVG i
+  `/view/capability_new.php`, laddat via `mermaid@latest` och färgsatt efter
+  sidans eget tema – ljust och rent i light mode, anpassat i dark mode.
+- Se [Markdown-stöd](#markdown-stöd) för en fullständig syntaxöversikt.
 
 ### Gemensam innehållsrot och valbart gränssnitt
 

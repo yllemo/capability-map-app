@@ -1,11 +1,10 @@
 <?php
 require __DIR__ . '/_auth.php';
-require_auth();
+require_edit();
 header('Content-Type: text/html; charset=UTF-8');
 
 use App\CapabilityRepository;
 use App\Frontmatter;
-use App\Markdown;
 use App\PathGuard;
 
 $app = cfg('app');
@@ -13,6 +12,7 @@ $tax = cfg('taxonomy');
 
 // Get available content directories and selected one
 $contentDirs = get_content_dirs();
+$editableDirs = editable_content_dirs();
 $selectedKey = get_selected_content_key();
 $contentDir = get_content_dir();
 $repo = new CapabilityRepository($contentDir);
@@ -23,23 +23,24 @@ $raw = '';
 $meta = [];
 $body = '';
 $notice = '';
+$noticeOk = true;
 
 // Handle error and success messages
 $error = $_GET['error'] ?? '';
 $success = $_GET['success'] ?? '';
 
 if ($error === 'duplicate_id') {
-  $notice = 'Fel: ID används redan av en annan förmåga';
+  $notice = 'Fel: ID används redan av en annan förmåga'; $noticeOk = false;
 } elseif ($error === 'missing_fields') {
-  $notice = 'Fel: ID och namn måste fyllas i';
+  $notice = 'Fel: ID och namn måste fyllas i'; $noticeOk = false;
 } elseif ($error === 'file_exists') {
-  $notice = 'Fel: Det finns redan en fil med det namnet';
+  $notice = 'Fel: Det finns redan en fil med det namnet'; $noticeOk = false;
 } elseif ($success === 'deleted') {
-  $notice = '✓ Filen raderades';
+  $notice = 'Filen raderades';
 } elseif ($success === 'saved') {
-  $notice = '✓ Ändringarna sparades';
+  $notice = 'Ändringarna sparades';
 } elseif ($success === 'renamed') {
-  $notice = '✓ Filen bytte namn';
+  $notice = 'Filen bytte namn';
 }
 
 if ($rel !== '') {
@@ -56,11 +57,15 @@ if ($rel !== '') {
       }
     }
   } catch (Throwable $e) {
-    $notice = 'Ogiltig fil';
+    $notice = 'Ogiltig fil'; $noticeOk = false;
   }
 }
 
+// Collect every markdown file, along with its frontmatter, so the sidebar
+// can show a readable label and the search box can filter by name/ID/area,
+// not just the filename.
 $files = [];
+$fileMeta = [];
 $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($contentDir, FilesystemIterator::SKIP_DOTS));
 foreach ($it as $f) {
   if (!$f->isFile()) continue;
@@ -68,362 +73,431 @@ foreach ($it as $f) {
   if ($ext !== 'md' && $ext !== 'markdown') continue;
   $relPath = ltrim(str_replace($contentDir, '', $f->getPathname()), DIRECTORY_SEPARATOR);
   if (preg_match('~(^|[/\\\\])\.capmap-import-[^/\\\\]+([/\\\\]|$)~', $relPath)) continue;
-  $files[] = str_replace(DIRECTORY_SEPARATOR, '/', $relPath);
+  $relPath = str_replace(DIRECTORY_SEPARATOR, '/', $relPath);
+  $files[] = $relPath;
+  $fm = [];
+  $fRaw = file_get_contents($f->getPathname());
+  if ($fRaw !== false) {
+    $fParsed = Frontmatter::parse($fRaw);
+    if (is_array($fParsed['meta'] ?? null)) $fm = $fParsed['meta'];
+  }
+  $fileMeta[$relPath] = $fm;
 }
 sort($files);
 
-$sidebar = '<div class="card"><div class="card__hd"><strong>Filer</strong><div style="display:flex;gap:8px"><button class="btn btn--ghost" onclick="showNewFolderModal()">+ Folder</button><a class="btn btn--ghost" href="new.php">+ Ny</a></div></div><div class="card__bd">';
-
-// Folder selector dropdown
-$sidebar .= '<div style="margin-bottom:10px">';
-if (count($contentDirs) > 1) {
-  $sidebar .= '<select id="contentDirSelect" class="select" style="width:100%;font-size:13px">';
-  foreach ($contentDirs as $key => $dir) {
-    $selected = ($key === $selectedKey) ? 'selected' : '';
-    $sidebar .= '<option value="'.h($key).'" '.$selected.'>📁 '.h($dir['label']).'</option>';
-  }
-  $sidebar .= '</select>';
-} else {
-  $currentLabel = $contentDirs[$selectedKey]['label'] ?? 'content';
-  $sidebar .= '<div class="muted" style="cursor:default">📁 '.h($currentLabel).'</div>';
+// Convert tags array to comma-separated string for editing
+$tagsValue = '';
+if (isset($meta['tags']) && is_array($meta['tags'])) {
+  $tagsValue = implode(', ', $meta['tags']);
+} elseif (isset($meta['tags']) && is_string($meta['tags'])) {
+  $tagsValue = $meta['tags'];
 }
-$sidebar .= '</div>';
-$sidebar .= '<div style="display:flex;flex-direction:column;gap:6px;max-height:65vh;overflow:auto">';
-$sidebar .= '<a class="btn btn--ghost" href="folder.php?map='.rawurlencode($selectedKey).'">Hantera folder</a>';
-foreach ($files as $f) {
-  $active = ($f === $rel) ? 'style="border-color: color-mix(in srgb, var(--primary) 60%, var(--border))"' : '';
-  $sidebar .= '<a class="tile" '.$active.' href="index.php?file='.rawurlencode($f).'"><div class="tile__title" style="font-size:14px">'.h(basename($f)).'</div><div class="tile__desc" style="margin:0">'.h(dirname($f)).'</div></a>';
-}
-$sidebar .= '</div>';
-$sidebar .= '<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">';
-$sidebar .= '<a class="btn btn--ghost" href="import_json.php?map='.rawurlencode($selectedKey).'">Importera JSON</a>';
-if (get_content_root() === null) $sidebar .= '<a class="btn btn--ghost" href="migrate_content.php">Flytta innehåll till /content</a>';
-$sidebar .= '<a class="btn btn--primary" href="download_zip.php?key='.h($selectedKey).'" style="text-align:center">';
-$sidebar .= '<svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
-$sidebar .= 'Ladda ner ZIP';
-$sidebar .= '</a>';
-$sidebar .= '<div style="display:flex;gap:8px"><a class="btn btn--ghost" href="logout.php">Logga ut</a><a class="btn btn--ghost" href="'.h(base_path('view/index.php')).'">Viewer</a></div>';
-$sidebar .= '</div>';
-$sidebar .= '</div></div>';
 
-$editor = '<div class="card"><div class="card__hd"><strong>Editor</strong><span class="muted">Markdown + YAML frontmatter</span></div><div class="card__bd">';
-if ($notice) $editor .= '<div class="badge" style="margin-bottom:10px">'.h($notice).'</div>';
+$mapQuery = '?map=' . rawurlencode($selectedKey);
+$backTarget = base_path('view/overview.php' . $mapQuery);
+?><!doctype html>
+<html lang="sv">
+<head>
+  <?php require __DIR__ . '/../app/templates/favicon.php'; ?>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Editor · Förmågekarta</title>
+  <link rel="stylesheet" href="<?= h(base_path('assets/overview.css')) ?>">
+  <link rel="stylesheet" href="<?= h(base_path('assets/view.css')) ?>">
+  <link rel="stylesheet" href="<?= h(base_path('assets/editor.css')) ?>">
+  <script defer src="<?= h(base_path('assets/app.js')) ?>"></script>
+  <script defer src="<?= h(base_path('assets/editor.js')) ?>"></script>
+</head>
+<body>
+<a class="skip-link" href="#editor-main">Hoppa till editorn</a>
+<header class="site-header">
+  <a class="brand" href="<?= h($backTarget) ?>" style="text-decoration:none;color:inherit" title="Tillbaka till förmågekartan">
+    <span class="brand-symbol" aria-hidden="true">▦</span>
+    <div><strong>Förmågekarta</strong><span>Editor</span></div>
+  </a>
+  <nav aria-label="Verktyg">
+    <?php if (count($editableDirs) > 1): ?>
+      <div class="map-picker header-map-picker">
+        <label for="contentDirSelect">Folder</label>
+        <div>
+          <select id="contentDirSelect" data-switch-url="<?= h(base_path('view/switch_content.php')) ?>" data-csrf="<?= h(csrf_token()) ?>">
+            <?php foreach ($editableDirs as $key => $dir): ?>
+              <option value="<?= h($key) ?>" <?= $key === $selectedKey ? 'selected' : '' ?>><?= h($dir['label']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      </div>
+    <?php else: ?>
+      <span class="header-user"><?= h($contentDirs[$selectedKey]['label'] ?? 'content') ?></span>
+    <?php endif; ?>
+    <a href="<?= h($backTarget) ?>">← Karta</a>
+    <a href="<?= h(base_path('view/index.php')) ?>">Viewer</a>
+    <?php if ($rel !== ''): ?><a href="<?= h(base_path('ai/index.php?file=' . rawurlencode($rel))) ?>">AI Editor</a><?php endif; ?>
+    <?php if (current_user() !== null): ?>
+      <span class="header-user" title="Inloggad som <?= h(user_display_name()) ?>"><?= h(user_display_name()) ?></span>
+      <a href="logout.php">Logga ut</a>
+    <?php endif; ?>
+    <button type="button" data-theme-toggle aria-label="Växla ljust och mörkt tema" title="Växla tema">◐</button>
+  </nav>
+</header>
+<main id="editor-main">
+  <?php if ($notice): ?>
+    <div class="editor-notice <?= $noticeOk ? 'is-ok' : 'is-error' ?>" role="status"><?= h($notice) ?></div>
+  <?php endif; ?>
 
-if ($rel === '') {
-  $editor .= '<p class="muted">Välj en fil till vänster, eller skapa en ny förmåga.</p>';
-} else {
-  $editor .= '<form method="post" action="save.php" class="grid" style="gap:10px">';
-  $editor .= '<input type="hidden" name="file" value="'.h($rel).'">';
-  $editor .= csrf_field();
-  $editor .= '<div class="grid grid--2" style="gap:10px">';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">ID</label><input class="input" name="id" value="'.h($meta['id'] ?? '').'"></div>';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Namn</label><input class="input" name="name" value="'.h($meta['name'] ?? '').'"></div>';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Skikt</label><select class="select" name="layer">';
-  foreach (($tax['layers'] ?? []) as $k=>$lbl){ $sel = (($meta['layer'] ?? '')===$k)?'selected':''; $editor .= '<option value="'.h($k).'" '.$sel.'>'.h($lbl).'</option>'; }
-  $editor .= '</select></div>';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Område</label><input class="input" name="area" value="'.h($meta['area'] ?? '').'"></div>';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Level</label><select class="select" name="level">';
-  foreach (($tax['levels'] ?? [1,2,3]) as $lvl){ $sel = ((int)($meta['level'] ?? 0)===(int)$lvl)?'selected':''; $editor .= '<option value="'.h((string)$lvl).'" '.$sel.'>'.h((string)$lvl).'</option>'; }
-  $editor .= '</select></div>';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Typ</label><select class="select" name="type">';
-  foreach (($tax['types'] ?? []) as $k=>$lbl){ $sel = (($meta['type'] ?? '')===$k)?'selected':''; $editor .= '<option value="'.h($k).'" '.$sel.'>'.h($lbl).'</option>'; }
-  $editor .= '</select></div>';
-  $editor .= '<div class="grid grid--2" style="gap:10px;grid-column:1/-1">';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Owner</label><input class="input" name="owner" value="'.h($meta['owner'] ?? '').'"></div>';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Status</label><input class="input" name="status" value="'.h($meta['status'] ?? '').'"></div>';
-  $editor .= '</div>';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Beskrivning</label><input class="input" name="description" value="'.h($meta['description'] ?? '').'"></div>';
-  // Convert tags array to comma-separated string for editing
-  $tagsValue = '';
-  if (isset($meta['tags']) && is_array($meta['tags'])) {
-    $tagsValue = implode(', ', $meta['tags']);
-  } elseif (isset($meta['tags']) && is_string($meta['tags'])) {
-    $tagsValue = $meta['tags'];
-  }
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Taggar <span class="muted">(kommaseparerade)</span></label><input class="input" name="tags" value="'.h($tagsValue).'" placeholder="ex: viktig, extern, digital"></div>';
-  $editor .= '<div class="grid grid--2" style="gap:10px">';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Maturity (1-5)</label><input class="input" name="maturity" value="'.h((string)($meta['maturity'] ?? '')).'"></div>';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Criticality (1-5)</label><input class="input" name="criticality" value="'.h((string)($meta['criticality'] ?? '')).'"></div>';
-  $editor .= '</div>';
-  $editor .= '</div>'; // end meta grid
+  <div class="editor-layout">
+    <aside class="editor-sidebar" aria-label="Förmågor">
+      <div class="editor-sidebar-head">
+        <div class="editor-sidebar-title">
+          <strong>Förmågor</strong>
+          <span class="editor-file-count" id="editor-file-count"><?= count($files) ?> filer</span>
+        </div>
+        <label class="search-label" for="editor-search">Sök förmåga<input id="editor-search" type="search" placeholder="Namn, ID, område eller fil…" autocomplete="off"></label>
+        <div class="editor-sidebar-actions">
+          <button type="button" class="btn btn--ghost" onclick="showNewFolderModal()">+ Mapp</button>
+          <a class="btn btn--ghost" href="new.php<?= h($mapQuery) ?>">+ Ny förmåga</a>
+        </div>
+      </div>
+      <p id="editor-file-empty" class="editor-file-empty" hidden>Inga träffar. Prova ett annat sökord.</p>
+      <div class="editor-file-list" id="editor-file-list">
+        <?php foreach ($files as $f):
+          $fm = $fileMeta[$f];
+          $isRedirect = isset($fm['redirect_map']);
+          $fName = is_string($fm['name'] ?? null) ? $fm['name'] : '';
+          $fId = is_string($fm['id'] ?? null) ? $fm['id'] : '';
+          $fLayer = is_string($fm['layer'] ?? null) ? $fm['layer'] : '';
+          $fArea = is_string($fm['area'] ?? null) ? $fm['area'] : '';
+          $active = ($f === $rel);
+          $searchText = mb_strtolower($f . ' ' . $fName . ' ' . $fId . ' ' . $fArea, 'UTF-8');
+          $layerLabel = $fLayer !== '' ? ($tax['layer_display_names'][$fLayer] ?? $tax['layers'][$fLayer] ?? $fLayer) : '';
+          $fileHref = 'index.php?file=' . rawurlencode($f) . '&map=' . rawurlencode($selectedKey);
+        ?>
+        <a class="editor-file<?= $active ? ' is-active' : '' ?>" href="<?= h($fileHref) ?>" data-search="<?= h($searchText) ?>">
+          <span class="editor-file-name"><?= h($fName !== '' ? $fName : basename($f)) ?></span>
+          <span class="editor-file-path"><?= h($f) ?></span>
+          <?php if ($fId !== ''): ?><span class="editor-file-id"><?= h($fId) ?></span><?php endif; ?>
+          <?php if ($isRedirect): ?><span class="editor-file-flag">↗ länkad förmåga</span><?php elseif ($layerLabel !== ''): ?><span class="editor-file-flag"><?= h($layerLabel) ?></span><?php endif; ?>
+        </a>
+        <?php endforeach; ?>
+      </div>
+      <div class="editor-sidebar-foot">
+        <a class="btn btn--ghost" href="folder.php?map=<?= rawurlencode($selectedKey) ?>">Hantera mappar</a>
+        <a class="btn btn--ghost" href="import_json.php?map=<?= rawurlencode($selectedKey) ?>">Importera JSON</a>
+        <?php if (get_content_root() === null): ?><a class="btn btn--ghost" href="migrate_content.php">Flytta innehåll till /content</a><?php endif; ?>
+        <a class="btn btn--primary" href="download_zip.php?key=<?= h($selectedKey) ?>">⬇ Ladda ner ZIP</a>
+      </div>
+    </aside>
 
-  $editor .= '<div class="grid grid--2" style="gap:10px">';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Markdown</label>';
-  $editor .= '<button class="btn btn--secondary" type="button" data-capability-link-picker data-targets-url="'.h(base_path('editor/link_targets.php')).'" style="margin-bottom:8px" disabled>↗ Infoga förmågelänk</button>';
-  $editor .= '<input type="hidden" name="body" id="bodyInput" value="'.h($body).'">';
-  $editor .= '<textarea class="textarea" id="bodyFallback" style="display:none;height:52vh">'.h($body).'</textarea>';
-  $editor .= '<div id="markdownEditor" class="card" style="height:52vh;border:1px solid var(--border);border-radius:10px;overflow:hidden"></div>';
-  $editor .= '</div>';
-  $editor .= '<div><label class="muted" style="display:block;margin-bottom:6px">Preview</label><div class="card" style="height:52vh; overflow:auto"><div class="card__bd prose" id="preview"></div></div></div>';
-  $editor .= '</div>';
+    <section class="editor-main" aria-label="Redigera förmåga">
+      <?php if ($rel === ''): ?>
+        <div class="editor-empty">
+          <p class="eyebrow">EDITOR</p>
+          <h1>Välj en förmåga att redigera</h1>
+          <p>Välj en fil i listan till vänster, eller skapa en ny förmåga för att börja.</p>
+          <a class="btn btn--primary" href="new.php<?= h($mapQuery) ?>">+ Skapa ny förmåga</a>
+        </div>
+      <?php else: ?>
+        <form method="post" action="save.php" id="capForm">
+          <input type="hidden" name="file" value="<?= h($rel) ?>">
+          <?= csrf_field() ?>
 
-  $editor .= '<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">';
-  $editor .= '<button class="btn btn--primary" type="submit">Spara</button>';
-  $editor .= '<button type="button" class="btn btn--secondary" onclick="showRawEditor()">Raw Edit</button>';
-  $editor .= '<a class="btn btn--secondary" href="'.h(base_path('ai/index.php?file=' . rawurlencode($rel))).'">Öppna i AI Editor</a>';
-  $editor .= '<a class="btn btn--ghost" href="'.h(base_path('view/capability.php?id=' . rawurlencode($meta['id'] ?? ''))).'">Öppna i viewer</a>';
-  $editor .= '<a class="btn btn--ghost" href="download.php?file='.rawurlencode($rel).'" download="'.h(basename($rel)).'" title="Ladda ner markdown-filen">';
-  $editor .= '<svg style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
-  $editor .= 'Ladda ner';
-  $editor .= '</a>';
-  $editor .= '<button type="button" class="btn btn--ghost" onclick="showRenameModal(\''.h(addslashes(basename($rel, '.md'))).'\')">Byt namn</button>';
-  $editor .= '<button type="button" class="btn btn--danger" onclick="confirmDelete(\''.h(addslashes($rel)).'\')">Radera</button>';
-  $editor .= '<span class="muted">Fil: <code>'.h($rel).'</code></span>';
-  $editor .= '</div>';
-  $editor .= '</form>';
+          <div class="editor-main-head">
+            <div>
+              <p class="eyebrow">REDIGERAR<?php if (($meta['id'] ?? '') !== ''): ?> <span><?= h($meta['id']) ?></span><?php endif; ?></p>
+              <h1><?= h(($meta['name'] ?? '') !== '' ? $meta['name'] : basename($rel, '.md')) ?></h1>
+              <p class="editor-file-sub">Fil: <code><?= h($rel) ?></code></p>
+            </div>
+            <div class="editor-main-actions">
+              <button class="btn btn--primary" type="submit">💾 Spara</button>
+              <a class="btn btn--ghost" href="<?= h(base_path('view/capability_new.php?id=' . rawurlencode($meta['id'] ?? '') . '&map=' . rawurlencode($selectedKey))) ?>">Öppna i viewer</a>
+              <button type="button" class="btn btn--ghost" onclick="showRawEditor()">Raw edit</button>
+            </div>
+          </div>
 
-  // Delete form (hidden)
-  ob_start();
-  require __DIR__ . '/../app/templates/link_picker.php';
-  $editor .= ob_get_clean();
-  $editor .= '<form id="deleteForm" method="post" action="delete.php" style="display:none">';
-  $editor .= '<input type="hidden" name="file" value="'.h($rel).'">';
-  $editor .= csrf_field();
-  $editor .= '</form>';
+          <fieldset class="editor-group">
+            <legend>Identitet</legend>
+            <div class="editor-fields">
+              <div class="editor-field"><label for="f-id">ID</label><input class="input" id="f-id" name="id" value="<?= h($meta['id'] ?? '') ?>"></div>
+              <div class="editor-field"><label for="f-name">Namn</label><input class="input" id="f-name" name="name" value="<?= h($meta['name'] ?? '') ?>"></div>
+              <div class="editor-field editor-field--wide"><label for="f-desc">Beskrivning</label><input class="input" id="f-desc" name="description" value="<?= h($meta['description'] ?? '') ?>"></div>
+            </div>
+          </fieldset>
 
-  // Rename form (hidden)
-  $editor .= '<form id="renameForm" method="post" action="rename.php" style="display:none">';
-  $editor .= '<input type="hidden" name="old_file" value="'.h($rel).'">';
-  $editor .= '<input type="hidden" name="new_name" id="renameNewName">';
-  $editor .= csrf_field();
-  $editor .= '</form>';
+          <fieldset class="editor-group">
+            <legend>Klassificering</legend>
+            <div class="editor-fields">
+              <div class="editor-field">
+                <label for="f-layer">Skikt</label>
+                <select class="select" id="f-layer" name="layer">
+                  <?php foreach (($tax['layers'] ?? []) as $k => $lbl): $sel = (($meta['layer'] ?? '') === $k) ? 'selected' : ''; ?>
+                    <option value="<?= h($k) ?>" <?= $sel ?>><?= h($lbl) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="editor-field"><label for="f-area">Område</label><input class="input" id="f-area" name="area" value="<?= h($meta['area'] ?? '') ?>"></div>
+              <div class="editor-field">
+                <label for="f-level">Nivå</label>
+                <select class="select" id="f-level" name="level">
+                  <?php foreach (($tax['levels'] ?? [1, 2, 3]) as $lvl): $sel = ((int)($meta['level'] ?? 0) === (int)$lvl) ? 'selected' : ''; ?>
+                    <option value="<?= h((string)$lvl) ?>" <?= $sel ?>><?= h((string)$lvl) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="editor-field">
+                <label for="f-type">Typ</label>
+                <select class="select" id="f-type" name="type">
+                  <?php foreach (($tax['types'] ?? []) as $k => $lbl): $sel = (($meta['type'] ?? '') === $k) ? 'selected' : ''; ?>
+                    <option value="<?= h($k) ?>" <?= $sel ?>><?= h($lbl) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+            </div>
+          </fieldset>
 
-  // Raw Editor Modal
-  $editor .= '<div id="rawEditorModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;padding:20px">';
-  $editor .= '<div class="card" style="width:90vw;height:85vh;max-width:1200px;display:flex;flex-direction:column">';
-  $editor .= '<div class="card__hd"><strong>Raw Editor</strong><span class="muted">Editera hela markdown-filen inklusive YAML frontmatter</span><button type="button" class="btn btn--ghost" onclick="closeRawEditor()" style="margin-left:auto">✕</button></div>';
-  $editor .= '<div class="card__bd" style="flex:1;display:flex;flex-direction:column">';
-  $editor .= '<form id="rawEditorForm" method="post" action="save_raw.php" style="height:100%;display:flex;flex-direction:column">';
-  $editor .= '<input type="hidden" name="file" value="'.h($rel).'">';
-  $editor .= csrf_field();
-  $editor .= '<div style="flex:1;margin-bottom:10px">';
-  $editor .= '<textarea id="rawContent" name="content" class="textarea" style="height:100%;font-family:monospace;font-size:13px;resize:none">'.h($raw).'</textarea>';
-  $editor .= '</div>';
-  $editor .= '<div style="display:flex;gap:10px;justify-content:space-between;align-items:center">';
-  $editor .= '<div class="muted" style="font-size:12px">Tips: Var försiktig med YAML-syntaxen. Kontrollera indragningar och specialtecken.</div>';
-  $editor .= '<div style="display:flex;gap:10px">';
-  $editor .= '<button type="button" class="btn btn--ghost" onclick="closeRawEditor()">Avbryt</button>';
-  $editor .= '<button type="submit" class="btn btn--primary">Spara Raw</button>';
-  $editor .= '</div>';
-  $editor .= '</div>';
-  $editor .= '</form>';
-  $editor .= '</div>';
-  $editor .= '</div>';
-  $editor .= '</div>';
+          <fieldset class="editor-group">
+            <legend>Ägarskap, status &amp; bedömning</legend>
+            <div class="editor-fields">
+              <div class="editor-field"><label for="f-owner">Ansvarig</label><input class="input" id="f-owner" name="owner" value="<?= h($meta['owner'] ?? '') ?>"></div>
+              <div class="editor-field"><label for="f-status">Status</label><input class="input" id="f-status" name="status" value="<?= h($meta['status'] ?? '') ?>"></div>
+              <div class="editor-field"><label for="f-maturity">Mognad (1-5)</label><input class="input" id="f-maturity" name="maturity" value="<?= h((string)($meta['maturity'] ?? '')) ?>"></div>
+              <div class="editor-field"><label for="f-criticality">Kritikalitet (1-5)</label><input class="input" id="f-criticality" name="criticality" value="<?= h((string)($meta['criticality'] ?? '')) ?>"></div>
+              <div class="editor-field editor-field--wide"><label for="f-tags">Taggar <span class="muted">(kommaseparerade)</span></label><input class="input" id="f-tags" name="tags" value="<?= h($tagsValue) ?>" placeholder="ex: viktig, extern, digital"></div>
+            </div>
+          </fieldset>
 
-  $editor .= '<script>
-    (function(){
-      const bodyInput = document.getElementById("bodyInput");
-      const fallbackTa = document.getElementById("bodyFallback");
-      const editorHost = document.getElementById("markdownEditor");
-      const pv = document.getElementById("preview");
-      const form = document.querySelector("form[action=\'save.php\']");
-      let hasUnsavedChanges = false;
-      const originalContent = bodyInput.value;
-      let monacoEditor = null;
-      let linkSelection = null;
-      document.addEventListener("capability-link-open", event => {
-        if (monacoEditor) {
-          linkSelection = monacoEditor.getSelection();
-          event.detail.selectedText = monacoEditor.getModel().getValueInRange(linkSelection);
-        } else {
-          linkSelection = { start: fallbackTa.selectionStart, end: fallbackTa.selectionEnd };
-          event.detail.selectedText = fallbackTa.value.slice(linkSelection.start, linkSelection.end);
-        }
-      });
-      document.addEventListener("capability-link-insert", event => {
-        if (monacoEditor) {
-          monacoEditor.focus();
-          monacoEditor.pushUndoStop();
-          monacoEditor.executeEdits("capability-link", [{ range: linkSelection || monacoEditor.getSelection(), text: event.detail, forceMoveMarkers: true }]);
-          monacoEditor.pushUndoStop();
-        } else {
-          fallbackTa.focus();
-          fallbackTa.setRangeText(event.detail, linkSelection?.start ?? fallbackTa.selectionStart, linkSelection?.end ?? fallbackTa.selectionEnd, "end");
-          handleBodyInput();
-        }
-      });
+          <fieldset class="editor-group editor-group--content">
+            <legend>Innehåll</legend>
+            <div class="editor-content-toolbar">
+              <button class="btn btn--ghost" type="button" data-capability-link-picker data-targets-url="<?= h(base_path('editor/link_targets.php')) ?>" disabled>↗ Infoga förmågelänk</button>
+            </div>
+            <div class="editor-content-split">
+              <div class="editor-content-col">
+                <span class="editor-content-label">Markdown</span>
+                <input type="hidden" name="body" id="bodyInput" value="<?= h($body) ?>">
+                <textarea class="textarea" id="bodyFallback" style="display:none"><?= h($body) ?></textarea>
+                <div id="markdownEditor" class="editor-codehost" data-render-url="render.php<?= h($mapQuery) ?>"></div>
+              </div>
+              <div class="editor-content-col">
+                <span class="editor-content-label">Förhandsgranskning</span>
+                <div class="editor-preview prose" id="preview" style="max-width:none"></div>
+              </div>
+            </div>
+          </fieldset>
 
-      function getBodyValue(){
-        if (monacoEditor) return monacoEditor.getValue();
-        if (fallbackTa) return fallbackTa.value;
-        return bodyInput.value || "";
-      }
+          <div class="editor-footer-actions">
+            <a class="btn btn--ghost" href="download.php?file=<?= rawurlencode($rel) ?>" download="<?= h(basename($rel)) ?>" title="Ladda ner markdown-filen">⬇ Ladda ner</a>
+            <button type="button" class="btn btn--ghost" onclick="showRenameModal('<?= h(addslashes(basename($rel, '.md'))) ?>')">Byt namn</button>
+            <button type="button" class="btn btn--danger" onclick="confirmDelete('<?= h(addslashes($rel)) ?>')">Radera</button>
+          </div>
+        </form>
 
-      function setBodyValue(value){
-        bodyInput.value = value;
-      }
+        <?php require __DIR__ . '/../app/templates/link_picker.php'; ?>
 
-      async function render(){
-        const fd = new FormData();
-        const currentValue = getBodyValue();
-        setBodyValue(currentValue);
-        fd.set("md", currentValue);
-        const res = await fetch("render.php?map=' . rawurlencode($selectedKey) . '", {method:"POST", body: fd});
-        pv.innerHTML = await res.text();
-      }
+        <form id="deleteForm" method="post" action="delete.php" style="display:none">
+          <input type="hidden" name="file" value="<?= h($rel) ?>">
+          <?= csrf_field() ?>
+        </form>
 
-      function handleBodyInput(){
-        const currentValue = getBodyValue();
-        setBodyValue(currentValue);
-        hasUnsavedChanges = (currentValue !== originalContent);
-        window.clearTimeout(window.__pvT);
-        window.__pvT=setTimeout(render, 150);
-      }
+        <form id="renameForm" method="post" action="rename.php" style="display:none">
+          <input type="hidden" name="old_file" value="<?= h($rel) ?>">
+          <input type="hidden" name="new_name" id="renameNewName">
+          <?= csrf_field() ?>
+        </form>
 
-      function initFallback(){
-        if (!fallbackTa || !editorHost) return;
-        editorHost.style.display = "none";
-        fallbackTa.style.display = "block";
-        fallbackTa.addEventListener("input", handleBodyInput);
-      }
+        <div id="rawEditorModal" class="modal-overlay" style="display:none">
+          <div class="modal-card modal-card--raw">
+            <div class="modal-head">
+              <strong>Raw editor</strong>
+              <span class="muted">Redigera hela markdown-filen inklusive YAML frontmatter</span>
+              <button type="button" class="btn btn--ghost" onclick="closeRawEditor()">✕</button>
+            </div>
+            <div class="modal-body">
+              <form id="rawEditorForm" method="post" action="save_raw.php" class="raw-editor-form">
+                <input type="hidden" name="file" value="<?= h($rel) ?>">
+                <?= csrf_field() ?>
+                <textarea id="rawContent" name="content" class="textarea raw-textarea"><?= h($raw) ?></textarea>
+                <div class="modal-foot">
+                  <div class="muted" style="font-size:12px">Tips: Var försiktig med YAML-syntaxen. Kontrollera indragningar och specialtecken.</div>
+                  <div style="display:flex;gap:10px">
+                    <button type="button" class="btn btn--ghost" onclick="closeRawEditor()">Avbryt</button>
+                    <button type="submit" class="btn btn--primary">Spara raw</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
 
-      function initMonaco(){
-        return new Promise((resolve) => {
-          if (!window.require) {
-            const loader = document.createElement("script");
-            loader.src = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js";
-            loader.onload = setupRequire;
-            loader.onerror = () => resolve(false);
-            document.head.appendChild(loader);
-          } else {
-            setupRequire();
+        <script>
+        (function(){
+          const bodyInput = document.getElementById("bodyInput");
+          const fallbackTa = document.getElementById("bodyFallback");
+          const editorHost = document.getElementById("markdownEditor");
+          const pv = document.getElementById("preview");
+          const form = document.getElementById("capForm");
+          const renderUrl = editorHost.dataset.renderUrl;
+          let hasUnsavedChanges = false;
+          const originalContent = bodyInput.value;
+          let monacoEditor = null;
+          let linkSelection = null;
+          document.addEventListener("capability-link-open", event => {
+            if (monacoEditor) {
+              linkSelection = monacoEditor.getSelection();
+              event.detail.selectedText = monacoEditor.getModel().getValueInRange(linkSelection);
+            } else {
+              linkSelection = { start: fallbackTa.selectionStart, end: fallbackTa.selectionEnd };
+              event.detail.selectedText = fallbackTa.value.slice(linkSelection.start, linkSelection.end);
+            }
+          });
+          document.addEventListener("capability-link-insert", event => {
+            if (monacoEditor) {
+              monacoEditor.focus();
+              monacoEditor.pushUndoStop();
+              monacoEditor.executeEdits("capability-link", [{ range: linkSelection || monacoEditor.getSelection(), text: event.detail, forceMoveMarkers: true }]);
+              monacoEditor.pushUndoStop();
+            } else {
+              fallbackTa.focus();
+              fallbackTa.setRangeText(event.detail, linkSelection?.start ?? fallbackTa.selectionStart, linkSelection?.end ?? fallbackTa.selectionEnd, "end");
+              handleBodyInput();
+            }
+          });
+
+          function getBodyValue(){
+            if (monacoEditor) return monacoEditor.getValue();
+            if (fallbackTa) return fallbackTa.value;
+            return bodyInput.value || "";
           }
 
-          function setupRequire(){
-            if (!window.require) {
-              resolve(false);
-              return;
-            }
-            window.require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs" } });
-            window.require(["vs/editor/editor.main"], function(){
-              if (!editorHost) {
-                resolve(false);
-                return;
+          function setBodyValue(value){
+            bodyInput.value = value;
+          }
+
+          async function render(){
+            const fd = new FormData();
+            const currentValue = getBodyValue();
+            setBodyValue(currentValue);
+            fd.set("md", currentValue);
+            const res = await fetch(renderUrl, {method:"POST", body: fd});
+            pv.innerHTML = await res.text();
+          }
+
+          function handleBodyInput(){
+            const currentValue = getBodyValue();
+            setBodyValue(currentValue);
+            hasUnsavedChanges = (currentValue !== originalContent);
+            window.clearTimeout(window.__pvT);
+            window.__pvT=setTimeout(render, 150);
+          }
+
+          function initFallback(){
+            if (!fallbackTa || !editorHost) return;
+            editorHost.style.display = "none";
+            fallbackTa.style.display = "block";
+            fallbackTa.addEventListener("input", handleBodyInput);
+          }
+
+          function initMonaco(){
+            return new Promise((resolve) => {
+              if (!window.require) {
+                const loader = document.createElement("script");
+                loader.src = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js";
+                loader.onload = setupRequire;
+                loader.onerror = () => resolve(false);
+                document.head.appendChild(loader);
+              } else {
+                setupRequire();
               }
-              monacoEditor = monaco.editor.create(editorHost, {
-                value: bodyInput.value || "",
-                language: "markdown",
-                theme: document.documentElement.classList.contains("dark") ? "vs-dark" : "vs",
-                automaticLayout: true,
-                minimap: { enabled: false },
-                wordWrap: "on",
-                fontSize: 14,
-                lineNumbers: "on",
-                scrollBeyondLastLine: false,
-              });
-              monacoEditor.onDidChangeModelContent(handleBodyInput);
-              resolve(true);
-            }, function(){
-              resolve(false);
+
+              function setupRequire(){
+                if (!window.require) {
+                  resolve(false);
+                  return;
+                }
+                window.require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs" } });
+                window.require(["vs/editor/editor.main"], function(){
+                  if (!editorHost) {
+                    resolve(false);
+                    return;
+                  }
+                  monacoEditor = monaco.editor.create(editorHost, {
+                    value: bodyInput.value || "",
+                    language: "markdown",
+                    theme: document.documentElement.dataset.theme === "dark" ? "vs-dark" : "vs",
+                    automaticLayout: true,
+                    minimap: { enabled: false },
+                    wordWrap: "on",
+                    fontSize: 14,
+                    lineNumbers: "on",
+                    scrollBeyondLastLine: false,
+                  });
+                  monacoEditor.onDidChangeModelContent(handleBodyInput);
+                  resolve(true);
+                }, function(){
+                  resolve(false);
+                });
+              }
             });
           }
-        });
-      }
 
-      initMonaco().then((ok) => {
-        if (!ok) initFallback();
-        document.querySelector("[data-capability-link-picker]").disabled = false;
-        render();
-      });
+          initMonaco().then((ok) => {
+            if (!ok) initFallback();
+            document.querySelector("[data-capability-link-picker]").disabled = false;
+            render();
+          });
 
-      const inputs = form.querySelectorAll("input, select, textarea");
-      inputs.forEach(input => {
-        const originalValue = input.value;
-        input.addEventListener("change", () => {
-          if (input.value !== originalValue) {
-            hasUnsavedChanges = true;
-          }
-        });
-      });
+          const inputs = form.querySelectorAll("input, select, textarea");
+          inputs.forEach(input => {
+            const originalValue = input.value;
+            input.addEventListener("change", () => {
+              if (input.value !== originalValue) {
+                hasUnsavedChanges = true;
+              }
+            });
+          });
 
-      // Warn before leaving page with unsaved changes
-      window.addEventListener("beforeunload", (e) => {
-        if (hasUnsavedChanges) {
-          e.preventDefault();
-          e.returnValue = "";
-          return "";
-        }
-      });
+          window.addEventListener("beforeunload", (e) => {
+            if (hasUnsavedChanges) {
+              e.preventDefault();
+              e.returnValue = "";
+              return "";
+            }
+          });
 
-      // Reset flag on form submit
-      form.addEventListener("submit", () => {
-        setBodyValue(getBodyValue());
-        hasUnsavedChanges = false;
-      });
-    })();
+          form.addEventListener("submit", () => {
+            setBodyValue(getBodyValue());
+            hasUnsavedChanges = false;
+          });
+        })();
+        </script>
+      <?php endif; ?>
+    </section>
+  </div>
+</main>
 
-    // Raw Editor functions
-    function showRawEditor() {
-      const modal = document.getElementById("rawEditorModal");
-      if (modal) {
-        modal.style.display = "flex";
-        const textarea = document.getElementById("rawContent");
-        if (textarea) {
-          textarea.focus();
-        }
-      }
-    }
-
-    function closeRawEditor() {
-      const modal = document.getElementById("rawEditorModal");
-      if (modal) {
-        modal.style.display = "none";
-      }
-    }
-
-    // Close modal when clicking outside
-    document.getElementById("rawEditorModal")?.addEventListener("click", function(e) {
-      if (e.target === this) {
-        closeRawEditor();
-      }
-    });
-
-    // Escape key to close
-    document.addEventListener("keydown", function(e) {
-      if (e.key === "Escape") {
-        closeRawEditor();
-      }
-    });
-  </script>';
-}
-$editor .= '</div></div>';
-
-$content = '<div class="grid grid--editor">'.$sidebar.$editor.'</div>';
-$title = 'Editor';
-$activeNav = 'editor';
-$containerClass = 'container--wide';
-
-ob_start();
-require __DIR__ . '/../app/templates/layout.php';
-echo ob_get_clean();
-?>
-
-<!-- New Folder Modal -->
-<div id="newFolderModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
-  <div class="card" style="max-width:500px;margin:20px;">
-    <div class="card__hd">
+<div id="newFolderModal" class="modal-overlay" style="display:none">
+  <div class="modal-card folder-modal-card">
+    <div class="modal-head">
       <strong>Skapa ny folder</strong>
-      <button class="btn btn--ghost" onclick="hideNewFolderModal()">✕</button>
+      <button type="button" class="btn btn--ghost" onclick="hideNewFolderModal()">✕</button>
     </div>
-    <div class="card__bd">
-      <form id="newFolderForm" style="display:flex;flex-direction:column;gap:12px">
+    <div class="modal-body">
+      <form id="newFolderForm" class="folder-modal-body">
         <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
         <div>
-          <label class="muted" style="display:block;margin-bottom:6px">Folder-nyckel (ex: content2)</label>
-          <input class="input" name="key" id="folderKey" placeholder="content2" required pattern="[a-z0-9_\-]+" title="Endast små bokstäver, siffror, - och _">
-          <div class="muted" style="font-size:11px;margin-top:4px">Används i URL och filsystem</div>
+          <label for="folderKey">Folder-nyckel (ex: content2)</label>
+          <input class="input" name="key" id="folderKey" placeholder="content2" required pattern="[a-z0-9_\-]+" title="Endast små bokstäver, siffror, - och _" style="margin-top:6px">
+          <div class="field-hint">Används i URL och filsystem</div>
         </div>
         <div>
-          <label class="muted" style="display:block;margin-bottom:6px">Visningsnamn</label>
-          <input class="input" name="label" id="folderLabel" placeholder="Alternativ katalog" required>
+          <label for="folderLabel">Visningsnamn</label>
+          <input class="input" name="label" id="folderLabel" placeholder="Alternativ katalog" required style="margin-top:6px">
         </div>
         <div>
-          <label class="muted" style="display:block;margin-bottom:6px">Beskrivning (valfri)</label>
-          <input class="input" name="description" id="folderDescription" placeholder="Beskrivning av denna folder">
+          <label for="folderDescription">Beskrivning (valfri)</label>
+          <input class="input" name="description" id="folderDescription" placeholder="Beskrivning av denna folder" style="margin-top:6px">
         </div>
-        <div id="folderError" class="badge" style="display:none;border-color:var(--danger);color:var(--danger)"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
+        <div id="folderError" class="field-error"></div>
+        <div class="modal-form-foot">
           <button type="button" class="btn btn--ghost" onclick="hideNewFolderModal()">Avbryt</button>
           <button type="submit" class="btn btn--primary">Skapa</button>
         </div>
@@ -431,118 +505,5 @@ echo ob_get_clean();
     </div>
   </div>
 </div>
-
-<script>
-// Folder switcher
-const csrfToken = '<?= h(csrf_token()) ?>';
-const contentDirSelect = document.getElementById('contentDirSelect');
-if(contentDirSelect){
-  contentDirSelect.addEventListener('change', async (e) => {
-    const key = e.target.value;
-    const originalValue = e.target.value;
-
-    try {
-      const formData = new FormData();
-      formData.append('key', key);
-      formData.append('csrf_token', csrfToken);
-
-      const response = await fetch('<?= h(base_path('view/switch_content.php')) ?>', {
-        method: 'POST',
-        body: formData
-      });
-
-      const result = await response.json();
-
-      if(result.success){
-        window.location.reload();
-      } else {
-        alert('Kunde inte byta katalog: ' + (result.error || 'Okänt fel'));
-        e.target.value = originalValue;
-      }
-    } catch(error) {
-      console.error('Error switching content directory:', error);
-      alert('Ett fel uppstod vid byte av katalog');
-      e.target.value = originalValue;
-    }
-  });
-}
-
-// New folder modal
-function showNewFolderModal(){
-  const modal = document.getElementById('newFolderModal');
-  if(modal){
-    modal.style.display = 'flex';
-    document.getElementById('folderKey').focus();
-  }
-}
-
-function hideNewFolderModal(){
-  const modal = document.getElementById('newFolderModal');
-  if(modal) modal.style.display = 'none';
-  document.getElementById('newFolderForm').reset();
-  document.getElementById('folderError').style.display = 'none';
-}
-
-// Handle new folder form submission
-const newFolderForm = document.getElementById('newFolderForm');
-if(newFolderForm){
-  newFolderForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(e.target);
-    const errorDiv = document.getElementById('folderError');
-    const submitBtn = e.target.querySelector('button[type=submit]');
-
-    // Disable submit button
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Skapar...';
-    errorDiv.style.display = 'none';
-
-    try {
-      const response = await fetch('create_folder.php', {
-        method: 'POST',
-        body: formData
-      });
-
-      const result = await response.json();
-
-      if(result.success){
-        // Open the new map, clearing any file selected in the previous map.
-        window.location.assign(result.redirect);
-      } else {
-        errorDiv.textContent = result.error || 'Ett fel uppstod';
-        errorDiv.style.display = 'block';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Skapa';
-      }
-    } catch(error) {
-      console.error('Error creating folder:', error);
-      errorDiv.textContent = 'Ett fel uppstod vid skapande av folder';
-      errorDiv.style.display = 'block';
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Skapa';
-    }
-  });
-}
-
-// Close modal on outside click
-document.getElementById('newFolderModal')?.addEventListener('click', (e) => {
-  if(e.target.id === 'newFolderModal') hideNewFolderModal();
-});
-
-// Delete confirmation
-function confirmDelete(filename) {
-  if (confirm('Är du säker på att du vill radera "' + filename + '"?\n\nDenna åtgärd kan inte ångras.')) {
-    document.getElementById('deleteForm').submit();
-  }
-}
-
-// Rename modal
-function showRenameModal(currentName) {
-  const newName = prompt('Ange nytt filnamn (utan .md):', currentName);
-  if (newName && newName.trim() !== '' && newName !== currentName) {
-    document.getElementById('renameNewName').value = newName.trim();
-    document.getElementById('renameForm').submit();
-  }
-}
-</script>
+</body>
+</html>

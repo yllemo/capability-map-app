@@ -1,9 +1,9 @@
 <?php
 require __DIR__ . '/_auth.php';
-require_auth();
+require_edit();
 header('Content-Type: text/html; charset=UTF-8');
 $selectedKey = get_selected_content_key();
-$dirs = get_content_dirs();
+$dirs = readable_content_dirs();
 $error = '';
 $notice = '';
 try {

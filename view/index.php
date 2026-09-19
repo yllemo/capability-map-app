@@ -12,8 +12,13 @@ $viewCfg = cfg('view');
 $uiCfg = cfg('ui');
 
 // Get available content directories and selected one
-$contentDirs = get_content_dirs();
+$contentDirs = readable_content_dirs();
 $selectedKey = get_selected_content_key();
+if (!isset($contentDirs[$selectedKey])) {
+  $fallback = array_key_first($contentDirs);
+  if ($fallback !== null) { set_content_dir($fallback); $selectedKey = $fallback; }
+}
+require_read($selectedKey);
 $selectedDir = get_content_dir();
 
 $repo = new CapabilityRepository($selectedDir);
@@ -412,6 +417,19 @@ function sectionChrome(string $layerKey, array $tax): array {
         class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition">
         Editor
       </a>
+
+      <?php if (current_user() !== null): ?>
+        <span class="inline-flex items-center gap-2 px-3 py-2 text-xs text-gray-500 dark:text-neutral-400" title="Inloggad som <?= h(user_display_name()) ?>"><?= h(user_display_name()) ?></span>
+        <a href="<?= h(base_path('editor/logout.php')) ?>"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition">
+          Logga ut
+        </a>
+      <?php elseif (!App\Auth::isOpen()): ?>
+        <a href="<?= h(base_path('editor/login.php')) ?>"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition">
+          Logga in
+        </a>
+      <?php endif; ?>
     </div>
   </div>
 </footer>

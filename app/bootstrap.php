@@ -232,6 +232,110 @@ function csrf_field(): string {
   return '<input type="hidden" name="csrf_token" value="' . h(csrf_token()) . '">';
 }
 
+/**
+ * True when the current visitor is logged in as any editor account.
+ * Always true when the installation has no accounts configured at all
+ * (config/auth.php: empty 'users' and empty 'editor_password') — the classic
+ * "no password set" open mode.
+ */
+function is_authed(): bool {
+  return App\Auth::isOpen() || App\Auth::currentUser() !== null;
+}
+
+/** The logged-in username, or null when not logged in (or when auth is open/disabled). */
+function current_user(): ?string {
+  return App\Auth::currentUser();
+}
+
+/** Human-readable name for a username, falling back to the username itself. */
+function user_display_name(?string $username = null): string {
+  $username = $username ?? current_user();
+  return $username === null ? 'Gäst' : App\Auth::displayName($username);
+}
+
+/** Redirects to the login page (preserving the current URL) unless already logged in. */
+function require_auth(): void {
+  if (is_authed()) return;
+  $return = (string)($_SERVER['REQUEST_URI'] ?? '');
+  $bp = rtrim(cfg('app')['base_path'] ?? '', '/');
+  if ($bp !== '' && str_starts_with($return, $bp)) $return = substr($return, strlen($bp));
+  $return = ltrim($return, '/');
+  header('Location: ' . base_path('editor/login.php') . ($return !== '' ? '?return=' . rawurlencode($return) : ''));
+  exit;
+}
+
+/** Whether the current visitor may read (view/export) the given map. */
+function can_read_map(string $mapKey): bool {
+  if (App\Auth::isOpen()) return true;
+  return App\Acl::canRead($mapKey, current_user());
+}
+
+/** Whether the current visitor may edit content in the given map. */
+function can_edit_map(string $mapKey): bool {
+  if (App\Auth::isOpen()) return true;
+  return App\Acl::canEdit($mapKey, current_user());
+}
+
+/** True for a user who can edit every currently configured map — used to gate cross-map/admin actions. */
+function is_admin(): bool {
+  foreach (get_content_dirs() as $key => $dir) {
+    if (!can_edit_map((string)$key)) return false;
+  }
+  return true;
+}
+
+/** @return array<string,array> Only the maps the current visitor may read. */
+function readable_content_dirs(): array {
+  return App\Acl::readableMaps(get_content_dirs(), current_user());
+}
+
+/** @return array<string,array> Only the maps the current visitor may edit. */
+function editable_content_dirs(): array {
+  return App\Acl::editableMaps(get_content_dirs(), current_user());
+}
+
+function access_denied_html(string $messageHtml): void {
+  http_response_code(403);
+  header('Content-Type: text/html; charset=UTF-8');
+  echo '<!doctype html><meta charset="utf-8"><title>Åtkomst nekad</title>'
+    . '<body style="font:15px/1.5 system-ui,sans-serif;max-width:640px;margin:60px auto;padding:0 20px">'
+    . '<h1 style="font-size:20px">Åtkomst nekad</h1><p>' . $messageHtml . '</p>'
+    . '<p><a href="' . h(base_path('view/index.php')) . '">Till förmågekartan</a></p></body>';
+  exit;
+}
+
+function access_denied(string $message): void {
+  access_denied_html(h($message));
+}
+
+/** Ensures the visitor may read $mapKey (defaults to the currently selected map); logs out-visitors in, denies logged-in-but-unpermitted ones. */
+function require_read(?string $mapKey = null): void {
+  $mapKey = $mapKey ?? get_selected_content_key();
+  if (can_read_map($mapKey)) return;
+  if (!is_authed()) { require_auth(); return; }
+  access_denied('Du har inte behörighet att läsa den här förmågekartan.');
+}
+
+/** Ensures the visitor is logged in AND may edit $mapKey (defaults to the currently selected map). */
+function require_edit(?string $mapKey = null): void {
+  require_auth();
+  $mapKey = $mapKey ?? get_selected_content_key();
+  if (can_edit_map($mapKey)) return;
+  $dirs = get_content_dirs();
+  $message = 'Du har inte behörighet att redigera "' . h($dirs[$mapKey]['label'] ?? $mapKey) . '".';
+  if (can_read_map($mapKey)) {
+    $message .= ' Du kan se kartan i <a href="' . h(base_path('view/overview.php?map=' . rawurlencode($mapKey))) . '">visningsläget</a>.';
+  }
+  access_denied_html($message);
+}
+
+/** Ensures the visitor can edit every configured map — used for cross-map/admin-only actions. */
+function require_admin(): void {
+  require_auth();
+  if (is_admin()) return;
+  access_denied('Den här åtgärden kräver behörighet att redigera alla förmågekartor.');
+}
+
 spl_autoload_register(function($class){
   $prefix = 'App\\';
   if (str_starts_with($class, $prefix)) {

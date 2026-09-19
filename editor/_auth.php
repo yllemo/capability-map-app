@@ -1,21 +1,6 @@
 <?php
+// Kept for backwards compatibility: every editor/ai/mcp script still does
+// `require __DIR__ . '/_auth.php'`. The actual auth/ACL functions
+// (is_authed, current_user, require_auth, require_edit, require_admin, ...)
+// live in app/bootstrap.php so that view/*.php can use them too.
 require __DIR__ . '/../app/bootstrap.php';
-
-$auth = cfg('auth');
-$cookie = $auth['cookie_name'] ?? 'capmap_editor';
-$pass = $auth['editor_password'] ?? '';
-
-function is_authed(): bool {
-  $auth = cfg('auth');
-  $cookie = $auth['cookie_name'] ?? 'capmap_editor';
-  $pass = $auth['editor_password'] ?? '';
-  if ($pass === '') return true;
-  return isset($_COOKIE[$cookie]) && hash_equals($pass, (string)$_COOKIE[$cookie]);
-}
-
-function require_auth(): void {
-  if (!is_authed()) {
-    header('Location: ' . base_path('editor/login.php'));
-    exit;
-  }
-}

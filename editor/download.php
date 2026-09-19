@@ -1,7 +1,8 @@
 <?php
 require __DIR__ . '/_auth.php';
-require_auth();
+require_edit();
 
+use App\Frontmatter;
 use App\PathGuard;
 
 $app = cfg('app');
@@ -36,6 +37,18 @@ if ($content === false) {
   http_response_code(500);
   echo 'Failed to read file';
   exit;
+}
+
+// If this is a capability file, note where it came from right after the
+// frontmatter so the file still parses correctly if re-imported elsewhere.
+$meta = Frontmatter::parse($content)['meta'] ?? [];
+if (is_string($meta['id'] ?? null) && $meta['id'] !== '') {
+  $sourceUrl = absolute_url('view/capability.php?id=' . rawurlencode($meta['id']) . '&map=' . rawurlencode(get_selected_content_key()));
+  $exportDate = date('Y-m-d');
+  $sourceComment = "<!-- Exporterad från Förmågekarta: {$sourceUrl} ({$exportDate}) -->\n";
+  $content = preg_match('/^(---\R.*?\R---\R)(.*)$/s', $content, $m)
+    ? $m[1] . $sourceComment . $m[2]
+    : $sourceComment . $content;
 }
 
 // Set headers for download

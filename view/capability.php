@@ -1,5 +1,10 @@
 <?php
 require __DIR__ . '/../app/bootstrap.php';
+$selfView = 'view/capability.php';
+$mapInterface = 'classic';
+$mapInterfaceTargets = ['classic' => 'view/capability.php', 'new' => 'view/capability_new.php'];
+require __DIR__ . '/../app/map_interface.php';
+$backMapTarget = $mapInterface === 'new' ? 'view/overview.php' : 'view/index.php';
 header('Content-Type: text/html; charset=UTF-8');
 
 use App\CapabilityRepository;
@@ -19,8 +24,8 @@ $repo = new CapabilityRepository($contentDir);
 $data = $repo->byId($id);
 
 if (!$data) {
-  // Fallback: try all configured content folders if map is missing/wrong.
-  $dirs = get_content_dirs();
+  // Fallback: try all readable content folders if map is missing/wrong.
+  $dirs = readable_content_dirs();
   foreach ($dirs as $key => $dirInfo) {
     if ($key === $selectedKey) continue;
     $candidateRepo = new CapabilityRepository((string)$dirInfo['path']);
@@ -33,7 +38,7 @@ if (!$data) {
     $contentDir = (string)$dirInfo['path'];
     $data = $candidate;
 
-    $target = base_path('view/capability.php?id=' . rawurlencode($id) . '&map=' . rawurlencode($key));
+    $target = base_path($selfView . '?id=' . rawurlencode($id) . '&map=' . rawurlencode($key));
     if (($_GET['download'] ?? '') === 'md') $target .= '&download=md';
     header('Location: ' . $target, true, 302);
     exit;
@@ -44,11 +49,13 @@ if (!$data) {
   exit;
 }
 
+require_read($selectedKey);
+
 $cap = $data['cap'];
 if (isset($cap->meta['redirect_map'])) {
   try {
     $target = App\CapabilityReference::resolve($cap->meta, get_content_dirs());
-    $url = base_path('view/capability.php?id=' . rawurlencode($target['cap']->id) . '&map=' . rawurlencode($target['map']));
+    $url = base_path($selfView . '?id=' . rawurlencode($target['cap']->id) . '&map=' . rawurlencode($target['map']));
     if (($_GET['download'] ?? '') === 'md') $url .= '&download=md';
     header('Location: ' . $url, true, 302);
   } catch (RuntimeException $e) {
@@ -64,6 +71,15 @@ if (($_GET['download'] ?? '') === 'md') {
     echo 'Failed to read file';
     exit;
   }
+
+  // Note where this file came from, right after the frontmatter so the file
+  // still parses correctly if it's re-imported elsewhere.
+  $sourceUrl = absolute_url($selfView . '?id=' . rawurlencode($cap->id) . '&map=' . rawurlencode($selectedKey));
+  $exportDate = date('Y-m-d');
+  $sourceComment = "<!-- Exporterad från Förmågekarta: {$sourceUrl} ({$exportDate}) -->\n";
+  $content = preg_match('/^(---\R.*?\R---\R)(.*)$/s', $content, $m)
+    ? $m[1] . $sourceComment . $m[2]
+    : $sourceComment . $content;
 
   $filename = pathinfo($cap->path, PATHINFO_FILENAME) . '.md';
   $fallbackFilename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename);
@@ -141,6 +157,7 @@ $meta = $cap->meta;
     tailwind.config = { darkMode: 'class', theme: { extend: { colors: { inera:{ blue:'#005595', dark:'#003e6d', light:'#e6f0f8' } } } } }
   </script>
   <link rel="stylesheet" href="<?= h(base_path('assets/view.css')) ?>">
+  <link rel="stylesheet" href="<?= h(base_path('assets/interface-toggle.css')) ?>">
   <script defer src="<?= h(base_path('assets/app.js')) ?>"></script>
 </head>
 <body class="bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-neutral-100 min-h-screen">
@@ -149,7 +166,7 @@ $meta = $cap->meta;
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <a href="<?= h(base_path('view/index.php')) ?>" class="flex items-center gap-3 no-underline hover:no-underline text-inherit">
+        <a href="<?= h(base_path($backMapTarget)) ?>" class="flex items-center gap-3 no-underline hover:no-underline text-inherit">
           <?= getLogoHtml($uiCfg) ?>
           <div>
             <div class="text-xs text-gray-500 dark:text-neutral-400 uppercase tracking-wider"><?= h($tax['layers'][$cap->layer] ?? $cap->layer) ?> • <?= h($cap->area) ?></div>
@@ -159,7 +176,7 @@ $meta = $cap->meta;
       </div>
       <div class="flex items-center gap-2">
         <a class="px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
-           href="<?= h(base_path('view/index.php?map=' . rawurlencode($selectedKey))) ?>">← Karta</a>
+           href="<?= h(base_path($backMapTarget . '?map=' . rawurlencode($selectedKey))) ?>">← Karta</a>
         <?php if ($relPath): ?>
           <a class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
              href="<?= h(base_path('editor/index.php?file=' . rawurlencode($relPath) . '&map=' . rawurlencode($selectedKey))) ?>">
@@ -169,13 +186,14 @@ $meta = $cap->meta;
             Redigera
           </a>
         <?php endif; ?>
-        <a href="<?= h(base_path('view/capability.php?id=' . rawurlencode($id) . '&map=' . rawurlencode($selectedKey) . '&download=md')) ?>"
+        <a href="<?= h(base_path($selfView . '?id=' . rawurlencode($id) . '&map=' . rawurlencode($selectedKey) . '&download=md')) ?>"
            class="inline-flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
            title="Ladda ner förmågan som Markdown (.md)" aria-label="Ladda ner förmågan som Markdown (.md)">
           <svg class="h-5 w-5 text-gray-600 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m-4-4 4 4 4-4M5 16v4a1 1 0 001 1h12a1 1 0 001-1v-4"/>
           </svg>
         </a>
+        <?php require __DIR__ . '/../app/templates/interface_toggle.php'; ?>
         <a href="<?= h(base_path('view/help.php')) ?>"
            class="inline-flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
            title="Hjälp & Best Practices">

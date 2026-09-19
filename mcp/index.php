@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/../editor/_auth.php';
-require_auth();
+require_read();
 header('Content-Type: application/json; charset=UTF-8');
 
 use App\PathGuard;

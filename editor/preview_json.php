@@ -1,6 +1,20 @@
 <?php
 require __DIR__ . '/_auth.php';
 header('Content-Type: application/json; charset=UTF-8');
+// A truly fatal error (parse error, OOM, timeout) bypasses try/catch entirely
+// and PHP prints it as raw HTML if display_errors is on, which breaks the
+// JSON response the client expects. Suppress that raw output and, on the way
+// out, replace it with a proper JSON error instead.
+ini_set('display_errors', '0');
+ob_start();
+register_shutdown_function(function () {
+  $err = error_get_last();
+  if ($err === null || !in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) return;
+  while (ob_get_level() > 0) ob_end_clean();
+  error_log('preview_json.php fatal: ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
+  if (http_response_code() < 400) http_response_code(500);
+  echo json_encode(['success' => false, 'error' => 'Ett internt fel uppstod vid inläsningen. Försök igen eller kontakta administratören.']);
+});
 try {
   if (!is_authed()) { http_response_code(401); throw new RuntimeException('Logga in i editorn igen.'); }
   if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); throw new RuntimeException('Använd POST.'); }

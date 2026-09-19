@@ -19,6 +19,8 @@ if (!isset($contentDirs[$key])) {
   exit;
 }
 
+require_edit($key);
+
 $dirConfig = $contentDirs[$key];
 $contentDir = $dirConfig['path'];
 $folderLabel = $dirConfig['label'] ?? $key;

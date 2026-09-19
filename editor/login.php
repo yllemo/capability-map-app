@@ -2,26 +2,26 @@
 require __DIR__ . '/_auth.php';
 header('Content-Type: text/html; charset=UTF-8');
 
-$auth = cfg('auth');
-$cookie = $auth['cookie_name'] ?? 'capmap_editor';
-$ttl = $auth['cookie_ttl'] ?? 28800;
-$pass = $auth['editor_password'] ?? '';
+use App\Auth;
+
+$isOpen = Auth::isOpen();
+$knownUsers = Auth::loginableUsers();
+$multiUser = count($knownUsers) > 1 || (count($knownUsers) === 1 && $knownUsers[0] !== 'editor');
+$return = ltrim((string)($_GET['return'] ?? $_POST['return'] ?? ''), '/');
+// Only allow a plain relative path within this app — never an absolute/external URL.
+if (str_contains($return, '://')) $return = '';
 
 $error = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $p = (string)($_POST['password'] ?? '');
-  if ($pass === '' || hash_equals($pass, $p)) {
-    setcookie($cookie, $pass, [
-      'expires' => time() + (int)$ttl,
-      'path' => base_path('/'),
-      'httponly' => true,
-      'samesite' => 'Lax',
-      'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
-    ]);
-    header('Location: ' . base_path('editor/index.php'));
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isOpen) {
+  $username = trim((string)($_POST['username'] ?? ($multiUser ? '' : 'editor')));
+  $password = (string)($_POST['password'] ?? '');
+  $verified = Auth::verifyCredentials($username, $password);
+  if ($verified !== null) {
+    Auth::issueCookie($verified);
+    header('Location: ' . ($return !== '' ? base_path(ltrim($return, '/')) : base_path('editor/index.php')));
     exit;
   }
-  $error = 'Fel lösenord';
+  $error = 'Fel användarnamn eller lösenord';
 }
 
 $title = 'Editor login';
@@ -29,20 +29,25 @@ $activeNav = 'editor';
 
 $content = '<div class="card" style="max-width:520px;margin:0 auto"><div class="card__hd"><strong>Editor</strong><span class="muted">inlogg</span></div><div class="card__bd">';
 
-// Warn if using default password
-if ($pass === 'change-me') {
+if ($isOpen) {
   $content .= '<div class="badge" style="border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); color: var(--danger); margin-bottom:12px; display:block">';
-  $content .= '⚠️ <strong>SÄKERHETSVARNING:</strong> Du använder standardlösenordet "change-me". Ändra omedelbart i <code>/config/auth.php</code>!';
+  $content .= '⚠️ <strong>Inget lösenordsskydd är konfigurerat.</strong> Lägg till konton i <code>/config/auth.php</code> innan driftsättning.';
   $content .= '</div>';
-}
-
-if ($pass === '') {
-  $content .= '<p class="muted">Editor-lösenord är avstängt i <code>/config/auth.php</code>.</p>';
-  $content .= '<a class="btn btn--primary" href="index.php">Fortsätt</a>';
+  $content .= '<a class="btn btn--primary" href="' . h(base_path('editor/index.php')) . '">Fortsätt</a>';
 } else {
-  if ($error) $content .= '<div class="badge" style="border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); color: var(--danger); margin-bottom:10px">'.h($error).'</div>';
-  $content .= '<form method="post"><label class="muted" style="display:block;margin-bottom:6px">Lösenord</label><input class="input" name="password" type="password" autofocus>';
-  $content .= '<div style="display:flex;gap:10px;margin-top:12px"><button class="btn btn--primary" type="submit">Logga in</button><a class="btn btn--ghost" href="'.h(base_path('view/index.php')).'">Till viewer</a></div></form>';
+  if (Auth::verifyCredentials('editor', 'CHANGE-ME-TO-SECURE-PASSWORD-BEFORE-DEPLOYMENT') !== null) {
+    $content .= '<div class="badge" style="border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); color: var(--danger); margin-bottom:12px; display:block">';
+    $content .= '⚠️ <strong>SÄKERHETSVARNING:</strong> Standardlösenordet är fortfarande aktivt. Ändra det omedelbart i <code>/config/auth.php</code>!';
+    $content .= '</div>';
+  }
+  if ($error) $content .= '<div class="badge" style="border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); color: var(--danger); margin-bottom:10px">' . h($error) . '</div>';
+  $content .= '<form method="post">';
+  if ($return !== '') $content .= '<input type="hidden" name="return" value="' . h($return) . '">';
+  if ($multiUser) {
+    $content .= '<label class="muted" style="display:block;margin-bottom:6px">Användarnamn</label><input class="input" name="username" type="text" autofocus style="margin-bottom:12px">';
+  }
+  $content .= '<label class="muted" style="display:block;margin-bottom:6px">Lösenord</label><input class="input" name="password" type="password"' . ($multiUser ? '' : ' autofocus') . '>';
+  $content .= '<div style="display:flex;gap:10px;margin-top:12px"><button class="btn btn--primary" type="submit">Logga in</button><a class="btn btn--ghost" href="' . h(base_path('view/index.php')) . '">Till viewer</a></div></form>';
 }
 $content .= '</div></div>';
 

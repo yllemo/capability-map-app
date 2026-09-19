@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/_auth.php';
-require_auth();
+require_edit();
 header('Content-Type: text/html; charset=UTF-8');
 $key = get_selected_content_key();
 $dirs = get_content_dirs();

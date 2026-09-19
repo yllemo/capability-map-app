@@ -38,6 +38,10 @@ $containerClass = $containerClass ?? 'container';
     <a class="btn btn--ghost <?= ($activeNav==='view'?'is-active':'') ?>" href="<?= h(base_path('view/index.php')) ?>">Viewer</a>
     <a class="btn btn--ghost <?= ($activeNav==='editor'?'is-active':'') ?>" href="<?= h(base_path('editor/index.php')) ?>">Editor</a>
     <a class="btn btn--ghost <?= ($activeNav==='ai'?'is-active':'') ?>" href="<?= h(base_path('ai/index.php')) ?>">AI</a>
+    <?php if (function_exists('current_user') && current_user() !== null): ?>
+      <span class="muted" style="font-size:12px;padding:0 4px" title="Inloggad som <?= h(user_display_name()) ?>"><?= h(user_display_name()) ?></span>
+      <a class="btn btn--ghost" href="<?= h(base_path('editor/logout.php')) ?>">Logga ut</a>
+    <?php endif; ?>
   </div>
 </header>
 

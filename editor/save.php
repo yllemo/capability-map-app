@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/_auth.php';
-require_auth();
+require_edit();
 
 use App\PathGuard;
 

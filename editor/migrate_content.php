@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/_auth.php';
-require_auth();
+require_admin();
 header('Content-Type: text/html; charset=UTF-8');
 $error = '';
 $warnings = [];

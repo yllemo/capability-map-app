@@ -30,7 +30,7 @@ class Logger {
 
   public static function audit(string $action, array $context = []): void {
     $timestamp = date('Y-m-d H:i:s');
-    $user = $_COOKIE[cfg('auth')['cookie_name'] ?? 'capmap_editor'] ?? 'anonymous';
+    $user = function_exists('current_user') ? (current_user() ?? 'anonymous') : 'anonymous';
     $contextStr = !empty($context) ? ' ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
     $logLine = "[{$timestamp}] AUDIT: {$action} (user: {$user}){$contextStr}\n";
 

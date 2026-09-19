@@ -51,6 +51,9 @@ final class CapabilityRepository {
     if (!isset($meta['redirect_map'])) return new Capability($meta, $file);
     try {
       $target = CapabilityReference::resolve($meta, $this->contentDirs);
+      if (function_exists('can_read_map') && !\can_read_map($target['map'])) {
+        throw new \RuntimeException('Du saknar behörighet att läsa originalförmågan.');
+      }
       $display = $target['cap']->meta;
       foreach (['layer', 'maturity', 'criticality', 'risk_level', 'level'] as $key) {
         if (array_key_exists($key, $meta) && $meta[$key] !== '') $display[$key] = $meta[$key];
