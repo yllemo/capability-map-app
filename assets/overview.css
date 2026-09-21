@@ -81,7 +81,7 @@ main { max-width: none; padding: 16px 24px 24px; }
 .site-header .header-map-picker { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; max-width: 100%; }
 .site-header .header-map-picker label { color: var(--header-text); font-size: 12px; white-space: nowrap; }
 .site-header .header-map-picker > div { margin: 0; min-width: 0; }
-.site-header .header-map-picker select { width: auto; max-width: min(260px, 55vw); padding: 7px 10px; font-size: 12px; border-color: #ffffff60; }
+.site-header .header-map-picker select { width: auto; max-width: min(260px, 55vw); padding: 7px 28px 7px 10px; font-size: 12px; border-color: #ffffff60; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='m1 1 4 4 4-4' fill='none' stroke='%23818d99' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
 .site-header .header-map-picker button { padding: 7px 10px; }
 
 .header-user { color: var(--header-text); font-size: 12px; padding: 8px 4px; white-space: nowrap; }
@@ -109,4 +109,6 @@ main { max-width: none; padding: 16px 24px 24px; }
 .overview-card-meta dt { color: var(--muted); flex-shrink: 0; }
 .overview-card-meta dd { margin: 0; text-align: right; overflow-wrap: anywhere; min-width: 0; }
 .overview-card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
-.overview-card-tags span { border: 1px solid var(--line); border-radius: 5px; background: var(--soft); color: var(--blue); padding: 2px 7px; font-size: 10px; overflow-wrap: anywhere; max-width: 100%; }
+.overview-card-tags span, .overview-card-tags a { border: 1px solid var(--line); border-radius: 5px; background: var(--soft); color: var(--blue); padding: 2px 7px; font-size: 10px; overflow-wrap: anywhere; max-width: 100%; }
+.overview-card-tags a { text-decoration: none; }
+.overview-card-tags a:hover { border-color: var(--blue); text-decoration: underline; }

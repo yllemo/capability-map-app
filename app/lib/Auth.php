@@ -81,8 +81,15 @@ final class Auth {
     return $username === self::LEGACY_USER ? 'Editor' : $username;
   }
 
+  public static function isAdministrator(): bool {
+    $user = self::currentUser();
+    if ($user === null) return false;
+    return (self::users()[$user]['role'] ?? (in_array($user, ['admin', self::LEGACY_USER], true) ? 'admin' : 'editor')) === 'admin';
+  }
+
   private static function sign(string $username, int $expires): string {
-    return hash_hmac('sha256', $username . '|' . $expires, self::secret());
+    $version = self::users()[$username]['session_version'] ?? '';
+    return hash_hmac('sha256', $username . '|' . $expires . $version, self::secret());
   }
 
   public static function issueCookie(string $username): void {

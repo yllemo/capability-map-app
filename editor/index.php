@@ -121,7 +121,7 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
         <label for="contentDirSelect">Folder</label>
         <div>
           <select id="contentDirSelect" data-switch-url="<?= h(base_path('view/switch_content.php')) ?>" data-csrf="<?= h(csrf_token()) ?>">
-            <?php foreach ($editableDirs as $key => $dir): ?>
+            <?php foreach (map_picker_dirs($editableDirs) as $key => $dir): ?>
               <option value="<?= h($key) ?>" <?= $key === $selectedKey ? 'selected' : '' ?>><?= h($dir['label']) ?></option>
             <?php endforeach; ?>
           </select>
@@ -182,6 +182,7 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
       </div>
       <div class="editor-sidebar-foot">
         <a class="btn btn--ghost" href="folder.php?map=<?= rawurlencode($selectedKey) ?>">Hantera mappar</a>
+        <?php if (App\Auth::isAdministrator()): ?><a class="btn btn--ghost" href="<?= h(base_path('admin/')) ?>">Admin</a><?php endif; ?>
         <a class="btn btn--ghost" href="import_json.php?map=<?= rawurlencode($selectedKey) ?>">Importera JSON</a>
         <?php if (get_content_root() === null): ?><a class="btn btn--ghost" href="migrate_content.php">Flytta innehåll till /content</a><?php endif; ?>
         <a class="btn btn--primary" href="download_zip.php?key=<?= h($selectedKey) ?>">⬇ Ladda ner ZIP</a>

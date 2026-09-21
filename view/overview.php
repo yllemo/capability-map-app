@@ -18,6 +18,11 @@ require_read($selectedKey);
 $pickerDirs = array_filter($dirs, function ($dirInfo, $key) use ($selectedKey) {
   return $key === $selectedKey || (new App\CapabilityRepository((string)$dirInfo['path']))->all();
 }, ARRAY_FILTER_USE_BOTH);
+// Keep readable parents visible even when they contain no capabilities.
+foreach (cfg('app')['map_parents'] ?? [] as $child => $parent) {
+  if (isset($pickerDirs[$child], $dirs[$parent])) $pickerDirs[$parent] = $dirs[$parent];
+}
+$pickerDirs = array_intersect_key($dirs, $pickerDirs);
 $caps = (new App\CapabilityRepository(get_content_dir()))->all();
 $groups = [];
 $areas = [];
@@ -52,10 +57,12 @@ $layerChrome = [
 <body>
 <a class="skip-link" href="#map">Hoppa till förmågekartan</a>
 <header class="site-header">
-  <a class="brand" href="<?= h(base_path('view/overview.php?map=' . rawurlencode($selectedKey))) ?>" style="text-decoration:none;color:inherit" title="Tillbaka till hela förmågekartan"><span class="brand-symbol" aria-hidden="true">▦</span><div><strong>Förmågekarta</strong><span>Verksamhetens förmågor, samlade</span></div></a>
+  <a class="brand" href="<?= h(base_path('view/overview.php?map=' . rawurlencode($selectedKey))) ?>" style="text-decoration:none;color:inherit" title="Tillbaka till hela förmågekartan"><span class="brand-symbol" aria-hidden="true">▦</span><div><strong><?= h(cfg('app')['site_name'] ?? 'Förmågekarta') ?></strong><span>Verksamhetens förmågor, samlade</span></div></a>
   <nav aria-label="Vyer och verktyg">
+    <?php if (App\Auth::isAdministrator()): ?><a href="<?= h(base_path('admin/')) ?>">Admin</a><?php endif; ?>
+    <a href="<?= h(base_path('view/tags.php')) ?>">Taggar</a>
     <?php require __DIR__ . '/../app/templates/interface_toggle.php'; ?>
-    <form action="<?= h(base_path('view/overview.php')) ?>" method="get" class="map-picker header-map-picker"><label for="map-select">Välj karta</label><div><select id="map-select" name="map"><?php foreach ($pickerDirs as $key => $dir): ?><option value="<?= h($key) ?>" <?= $key === $selectedKey ? 'selected' : '' ?>><?= h($dir['label'] ?? $key) ?></option><?php endforeach; ?></select><button type="submit">Visa</button></div></form>
+    <form action="<?= h(base_path('view/overview.php')) ?>" method="get" class="map-picker header-map-picker"><label for="map-select">Välj karta</label><div><select id="map-select" name="map"><?php foreach (map_picker_dirs($pickerDirs) as $key => $dir): ?><option value="<?= h($key) ?>" <?= $key === $selectedKey ? 'selected' : '' ?>><?= h($dir['label'] ?? $key) ?></option><?php endforeach; ?></select><button type="submit">Visa</button></div></form>
     <a href="<?= h(base_path('editor/index.php' . $mapQuery)) ?>">Editor</a>
     <div class="export-menu">
       <button type="button" id="export-menu-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="export-menu-content">Exportera <span class="chevron-icon" aria-hidden="true"></span></button>

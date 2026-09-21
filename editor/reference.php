@@ -39,14 +39,30 @@ try {
     $notice = 'Referensen sparades.';
   }
 } catch (Throwable $e) { $error = $e->getMessage(); }
-$title = 'Referenskort';
-$activeNav = 'editor';
-ob_start();
 ?>
-<div class="card" style="max-width:760px;margin:0 auto"><div class="card__hd"><strong>Referenskort</strong><a class="btn btn--ghost" href="index.php?map=<?= h(rawurlencode($selectedKey)) ?>">Till editor</a></div><div class="card__bd">
-<?php if ($error): ?><p role="alert"><?= h($error) ?></p><?php endif; ?>
-<?php if ($notice): ?><p role="status"><?= h($notice) ?></p><?php endif; ?>
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Referenskort · <?= h(cfg('app')['site_name'] ?? 'Förmågekarta') ?></title>
+  <?php require __DIR__ . '/../app/templates/favicon.php'; ?>
+  <link rel="stylesheet" href="<?= h(base_path('assets/overview.css')) ?>">
+  <link rel="stylesheet" href="<?= h(base_path('assets/admin.css')) ?>">
+  <link rel="stylesheet" href="<?= h(base_path('assets/reference.css')) ?>">
+  <script defer src="<?= h(base_path('assets/app.js')) ?>"></script>
+</head>
+<body>
+<a class="skip-link" href="#reference-form">Hoppa till kortinställningarna</a>
+<header class="site-header">
+  <a class="brand admin-brand" href="<?= h(base_path('view/overview.php?map=' . rawurlencode($selectedKey))) ?>"><span class="brand-symbol" aria-hidden="true">▦</span><div><strong><?= h(cfg('app')['site_name'] ?? 'Förmågekarta') ?></strong><span>Referenskort</span></div></a>
+  <nav aria-label="Vyer och verktyg"><a href="<?= h(base_path('editor/index.php?map=' . rawurlencode($selectedKey))) ?>">Till editor</a><?php if (App\Auth::isAdministrator()): ?><a href="<?= h(base_path('admin/')) ?>">Admin</a><?php endif; ?><button type="button" data-theme-toggle aria-label="Växla ljust och mörkt tema">◐</button></nav>
+</header>
+<main class="admin-main reference-main" id="reference-form">
+<section class="intro"><div><p class="eyebrow">KORTINSTÄLLNINGAR · <?= h($dirs[$selectedKey]['label'] ?? $selectedKey) ?></p><h1>Referenskort</h1><p>Välj originalförmåga och anpassa kortets placering och nivåer.</p></div></section>
+<?php if ($error): ?><p class="admin-notice is-error" role="alert"><?= h($error) ?></p><?php endif; ?>
+<?php if ($notice): ?><p class="admin-notice" role="status"><?= h($notice) ?></p><?php endif; ?>
 <?php if (isset($meta['redirect_map'])): ?>
+<section class="card"><div class="card__bd"><h2>Länkad förmåga</h2>
   <p>Innehållet hämtas från originalet. Att ta bort referensen påverkar inte originalförmågan.</p>
   <?php try { $target = App\CapabilityReference::resolve($meta, $dirs); ?>
     <p><a class="btn btn--secondary" href="<?= h(base_path('view/capability.php?map=' . rawurlencode($target['map']) . '&id=' . rawurlencode($target['cap']->id))) ?>">Öppna original: <?= h($target['cap']->name) ?></a></p>
@@ -59,12 +75,12 @@ ob_start();
     <?php $referenceValues = $meta; require __DIR__ . '/../app/templates/reference_options.php'; ?>
     <button class="btn btn--primary" type="submit">Spara referenskort</button>
   </form>
-  <pre style="overflow:auto"><?= h($raw) ?></pre>
+</div></section>
+  <details class="card"><summary class="reference-summary">Visa Markdown och omstyrning</summary><div class="card__bd"><pre class="reference-source"><?= h($raw) ?></pre></div></details>
+  <section class="card"><div class="card__bd"><h2>Ta bort referenskort</h2><p>Endast detta referenskort tas bort. Originalförmågan finns kvar.</p>
   <form method="post" action="delete.php?map=<?= h(rawurlencode($selectedKey)) ?>" onsubmit="return confirm('Ta bort referenskortet? Originalet påverkas inte.');">
     <?= csrf_field() ?><input type="hidden" name="file" value="<?= h($rel) ?>"><button class="btn btn--danger" type="submit">Ta bort referens</button>
   </form>
+</div></section>
 <?php endif; ?>
-</div></div>
-<?php
-$content = ob_get_clean();
-require __DIR__ . '/../app/templates/layout.php';
+</main></body></html>

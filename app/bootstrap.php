@@ -84,7 +84,16 @@ function cfg(string $name): array {
       unset($dir);
     }
   }
-  return $cache[$name];
+  $admin = App\AdminSettings::read();
+  $result = $cache[$name];
+  if ($name === 'auth') {
+    foreach ($admin['users'] ?? [] as $username => $user) {
+      if ($user === null) unset($result['users'][$username]);
+      else $result['users'][$username] = $user;
+    }
+  }
+  if ($name === 'app') $result = array_replace($result, $admin['app'] ?? []);
+  return $result;
 }
 
 function base_path(string $path = ''): string {
@@ -138,7 +147,31 @@ function get_content_dirs(): array {
       ],
     ];
   }
-  return $dirs;
+  $ordered = [];
+  foreach (cfg('app')['map_order'] ?? [] as $key) {
+    if (isset($dirs[$key])) $ordered[$key] = $dirs[$key];
+  }
+  return $ordered + $dirs;
+}
+
+/** Presentation-only hierarchy, applied after access filtering. */
+function map_picker_dirs(array $dirs): array {
+  foreach ($dirs as $key => &$dir) $dir['label'] = '📁 ' . ($dir['label'] ?? $key);
+  unset($dir);
+  $parents = cfg('app')['map_parents'] ?? [];
+  $result = [];
+  foreach ($dirs as $key => $dir) {
+    $parent = $parents[$key] ?? '';
+    // A hidden/deleted parent must not hide its readable children or expose its name.
+    if ($parent !== '' && isset($dirs[$parent]) && $parent !== (string)$key) continue;
+    $result[$key] = $dir;
+    foreach ($dirs as $childKey => $child) {
+      if (($parents[$childKey] ?? '') !== (string)$key || $childKey === $key) continue;
+      $child['label'] = '　└ ' . $child['label'];
+      $result[$childKey] = $child;
+    }
+  }
+  return $result + $dirs;
 }
 
 /** Null means the installation still uses its legacy content paths. */

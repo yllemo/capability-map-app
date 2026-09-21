@@ -134,9 +134,16 @@ $editorTarget = base_path('editor/index.php' . $mapQuery);
         <p class="muted">Välj originalet från någon av kartorna. Kortet följer originalets innehåll. Du kan välja egna skikt och nivåer nedan. Klick på kortet öppnar originalet. Endast omstyrningen och dina egna inställningar sparas i den aktuella kartan.</p>
         <form method="post" action="new.php?map=<?= h(rawurlencode($selectedKey)) ?>" class="grid" style="gap:10px">
           <?= csrf_field() ?><input type="hidden" name="creation_mode" value="reference">
+          <div class="editor-field" id="reference-search-field">
+            <label for="reference-search">Sök originalförmåga</label>
+            <input class="input" type="search" id="reference-search" placeholder="Sök på namn, karta eller ID…" aria-controls="reference-target" autocomplete="off">
+            <p class="field-hint">Skriv för att filtrera listan nedan på namn, karta eller ID. Klicka sedan på originalförmågan du vill länka.</p>
+            <p class="field-hint" id="reference-search-status" role="status" aria-live="polite"></p>
+            <noscript><p>Sökningen kräver JavaScript. Du kan fortfarande välja en förmåga i listan nedan.</p></noscript>
+          </div>
           <div class="editor-field">
             <label for="reference-target">Originalförmåga (karta · namn · ID)</label>
-            <select class="select" id="reference-target" name="reference_target" required>
+            <select class="select" id="reference-target" name="reference_target" size="7" style="height:auto;min-height:180px" required>
               <option value="">Välj förmåga…</option>
               <?php foreach (App\CapabilityReference::choices(readable_content_dirs()) as $choice): ?>
               <option value="<?= h(json_encode([$choice['map'], $choice['id']], JSON_UNESCAPED_UNICODE)) ?>"><?= h($choice['label'] . ' · ' . $choice['name'] . ' · ' . $choice['id']) ?></option>
@@ -243,6 +250,6 @@ $editorTarget = base_path('editor/index.php' . $mapQuery);
     </section>
   </div>
 </main>
-<script defer src="<?= h(base_path('assets/new-capability.js')) ?>"></script>
+<script defer src="<?= h(base_path('assets/new-capability.js') . '?v=' . filemtime(__DIR__ . '/../assets/new-capability.js')) ?>"></script>
 </body>
 </html>

@@ -195,7 +195,7 @@ $tags = array_filter($tags, fn($t) => is_scalar($t) && trim((string)$t) !== '');
       </dl>
       <?php if ($tags): ?>
         <div class="overview-card-tags" aria-label="Taggar">
-          <?php foreach ($tags as $t): ?><span><?= h((string)$t) ?></span><?php endforeach; ?>
+          <?php foreach ($tags as $t): ?><a href="<?= h(base_path('view/tags.php?tag=' . rawurlencode(trim((string)$t)))) ?>" title="<?= h('Visa förmågor med taggen ' . trim((string)$t)) ?>"><?= h((string)$t) ?></a><?php endforeach; ?>
         </div>
       <?php endif; ?>
     </aside>

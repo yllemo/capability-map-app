@@ -2,6 +2,59 @@
 
 En fullständig Enterprise Architecture capability map-applikation byggd med PHP och Markdown.
 
+## Administration
+
+Öppna `/admin/` eller välj **Admin** när du är inloggad som administratör.
+Adminsidan använder det moderna gränssnittet med ljust/mörkt tema och flikarna
+**Webbplats**, **Kartor** och **Användare**. Varje kategori sparas separat och
+du stannar på samma flik efter sparning. Flikarna kan även länkas direkt via
+`/admin/index.php?tab=site`, `?tab=maps` respektive `?tab=users`.
+Här kan du skapa, redigera och ta bort användare, byta lösenord och välja rollen
+Editor eller Administratör. Kontona `admin` och det äldre delade kontot `editor`
+är administratörer som standard; andra konton kan få `role => 'admin'` i
+`config/auth.php` eller rollen via adminsidan. Anonyma besökare får aldrig åtkomst,
+inte heller när editorn körs utan inloggningskrav.
+
+Du kan även ändra webbplatsnamn, standardgränssnitt för nya besökare och
+kartornas ordning med sorteringsnummer. Ordningen används i appens kartlistor.
+Varje karta kan få en **överordnad karta** för två nivåer i kartväljaren.
+Underliggande kartor visas indragna direkt efter sin överordnade karta; båda
+kan väljas. Sorteringsnumren styr ordningen inom varje nivå. Detta ändrar inte
+katalogernas sökvägar, filer eller behörigheter. Om överordnad karta inte är
+tillgänglig för besökaren visas den underliggande kartan på huvudnivån.
+Kartornas befintliga läs- och redigeringsregler i `config/acl.php` gäller fortsatt.
+Din egen administratörsroll och ditt eget konto kan inte tas bort via sidan.
+Ändrade konton får sina tidigare inloggningar återkallade.
+Behörighets- och sessionskontroller kan verifieras med `php tests/admin_auth.php`.
+
+Inställningarna lagras i `content/.capmap-admin.php`, med lösenordshashar och
+utan HTTP-utdata vid direkt åtkomst. Inkludera filen i säkerhetskopior och håll
+den på persistent lagring. PHP behöver skrivrättighet till `/content`, inte
+projektroten. Lokala inställningar ersätter motsvarande värden i grundkonfigurationen.
+
+## Taggvy
+
+Välj **Taggar** i den moderna kartvyn för att visa taggar och förmågor i en lista.
+Vyn använder samma ljusa/mörka tema och visar endast kartor som besökaren får läsa.
+Som standard söks alla tillgängliga kartor; välj en karta för att begränsa sökningen.
+Taggarna visar antalet förmågor och går att klicka på. Förmågor utan taggar ingår inte.
+Tagglistan visar 30 taggar per sida som standard, med val för 60 eller 100.
+Sortera alfabetiskt, efter karta/katalog eller efter antal förmågor (flest först).
+Vid sortering per karta visas samma tagg separat under varje karta med antalet
+förmågor i just den kartan; klick filtrerar på både karta och tagg. Övriga
+sorteringar slår samman taggar över de valda kartorna. Sökningen omfattar även
+taggar som inte visas på aktuell sida. Förmågelistan visar 30 resultat per sida.
+Sidbläddringen behåller sökning, filter och sortering i adressen.
+
+- `view/tags.php?tag=intranät` visar alla förmågor med exakt den taggen.
+- `view/tags.php?q=intra` söker efter delar av taggnamn.
+- `view/tags.php?tag=intranät&map=content` begränsar till en konfigurerad kartnyckel.
+
+Sökningen skiljer inte på stora och små bokstäver. Länkarna i vyn kodar taggar
+med mellanslag eller specialtecken automatiskt och kan kopieras för delning.
+Klick på ett förmågenamn öppnar den vanliga detaljvyn med rätt karta och sparat
+gränssnittsval. Länkade förmågor omdirigeras som vanligt till originalet.
+
 ## Importera JSON från capability-map-skill
 
 Öppna editorn och välj **Importera JSON**, välj målkarta och ladda upp en fil enligt

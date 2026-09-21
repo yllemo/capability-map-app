@@ -1,4 +1,29 @@
 (() => {
+  const referenceSearch = document.querySelector('#reference-search');
+  const referenceTarget = document.querySelector('#reference-target');
+  if (referenceSearch && referenceTarget) {
+    const status = document.querySelector('#reference-search-status');
+    const placeholder = referenceTarget.options[0];
+    const normalize = value => value.normalize('NFC').toLocaleLowerCase('sv');
+    const options = [...referenceTarget.options].slice(1).map(option => ({
+      option, search: normalize(option.textContent)
+    }));
+    const filter = () => {
+      const selected = referenceTarget.value;
+      const terms = normalize(referenceSearch.value).trim().split(/\s+/).filter(Boolean);
+      const matches = options.filter(item => terms.every(term => item.search.includes(term)));
+      referenceTarget.replaceChildren(placeholder, ...matches.map(item => item.option));
+      referenceTarget.value = matches.some(item => item.option.value === selected) ? selected : '';
+      placeholder.textContent = matches.length ? 'Välj förmåga…' : 'Inga förmågor matchar sökningen';
+      status.textContent = `${matches.length} av ${options.length} förmågor visas.`;
+    };
+    referenceSearch.addEventListener('input', filter);
+    // Enter in the search field must not create a reference card.
+    referenceSearch.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); referenceTarget.focus(); }
+    });
+    filter();
+  }
   const upload = document.querySelector('#json-preview-form');
   const form = document.querySelector('#new-capability-form');
   const message = document.querySelector('#json-import-message');

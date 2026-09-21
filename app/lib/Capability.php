@@ -13,6 +13,7 @@ final class Capability {
   public string $description;
   public array $meta;
   public string $path; // absolute path on disk
+  public string $_source_dir = ''; // Source directory label for combined exports
 
   public function __construct(array $meta, string $path) {
     $this->meta = $meta;

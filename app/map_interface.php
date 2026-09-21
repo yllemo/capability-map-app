@@ -11,7 +11,7 @@ $mapInterfaceTargets = $mapInterfaceTargets ?? [
 ];
 
 $requestedInterface = $_GET['interface'] ?? null;
-$savedInterface = $_COOKIE['capmap_interface'] ?? $_SESSION['capmap_interface'] ?? 'classic';
+$savedInterface = $_COOKIE['capmap_interface'] ?? $_SESSION['capmap_interface'] ?? cfg('app')['default_interface'] ?? 'classic';
 $chosenInterface = in_array($requestedInterface, ['classic', 'new'], true)
   ? $requestedInterface
   : ($mapInterface === 'new' ? 'new' : ($savedInterface === 'new' ? 'new' : 'classic'));

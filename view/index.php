@@ -157,9 +157,9 @@ function sectionChrome(string $layerKey, array $tax): array {
         <div class="relative">
           <select id="contentDirSelect"
                   class="block w-full pl-3 pr-10 py-2 border border-gray-300 dark:border-neutral-700 rounded-md leading-5 bg-gray-50 dark:bg-neutral-900 text-sm text-gray-700 dark:text-neutral-200 focus:outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-inera-blue focus:ring-1 focus:ring-inera-blue transition duration-150 ease-in-out">
-            <?php foreach ($contentDirs as $key => $dir): ?>
+            <?php foreach (map_picker_dirs($contentDirs) as $key => $dir): ?>
               <option value="<?= h($key) ?>" <?= $key === $selectedKey ? 'selected' : '' ?>>
-                📁 <?= h($dir['label']) ?>
+                <?= h($dir['label']) ?>
               </option>
             <?php endforeach; ?>
           </select>
@@ -176,6 +176,7 @@ function sectionChrome(string $layerKey, array $tax): array {
             </button>
 
             <?php require __DIR__ . '/../app/templates/interface_toggle.php'; ?>
+            <?php if (App\Auth::isAdministrator()): ?><a href="<?= h(base_path('admin/')) ?>">Admin</a><?php endif; ?>
             <a href="<?= h(base_path('view/help.php')) ?>"
                class="inline-flex items-center justify-center w-10 h-10 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
                title="Hjälp & Best Practices">
