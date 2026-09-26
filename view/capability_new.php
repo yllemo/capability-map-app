@@ -202,9 +202,13 @@ $tags = array_filter($tags, fn($t) => is_scalar($t) && trim((string)$t) !== '');
   </div>
 </main>
 <?php if ($hasMermaid): ?>
+<dialog id="diagram-lightbox" aria-labelledby="diagram-title">
+  <div class="diagram-toolbar"><h2 id="diagram-title">Diagram</h2><button type="button" id="diagram-redraw">Rita om efter bredd</button><button type="button" id="diagram-close" autofocus>Stäng</button></div>
+  <div class="prose diagram-canvas"><pre class="mermaid" id="diagram-expanded"></pre></div>
+</dialog>
 <script type="module">
 (async () => {
-  const nodes = [...document.querySelectorAll('pre.mermaid')];
+  const nodes = [...document.querySelectorAll('main pre.mermaid')];
   if (!nodes.length) return;
   nodes.forEach(n => { n.dataset.mermaidSrc = n.textContent; });
 
@@ -272,22 +276,49 @@ $tags = array_filter($tags, fn($t) => is_scalar($t) && trim((string)$t) !== '');
     };
   }
 
-  async function render() {
-    mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: themeVariables(), securityLevel: 'strict' });
-    nodes.forEach(n => {
-      n.removeAttribute('data-processed');
-      n.textContent = n.dataset.mermaidSrc;
-    });
-    try {
-      await mermaid.run({ nodes });
-    } catch (err) {
-      console.error('Kunde inte rendera Mermaid-diagram:', err);
-    }
+  const dialog = document.getElementById('diagram-lightbox');
+  const expanded = document.getElementById('diagram-expanded');
+  let queue = Promise.resolve();
+  function render(targets = nodes) {
+    queue = queue.then(async () => {
+      for (const n of targets) {
+        if (n === expanded && !dialog.open) continue;
+        const width = Math.max(280, n.parentElement.clientWidth - 48);
+        mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: themeVariables(), securityLevel: 'strict',
+          flowchart: { useMaxWidth: true, wrappingWidth: Math.round(Math.min(520, Math.max(260, width * .32))), padding: 24, nodeSpacing: 60, rankSpacing: 60 },
+        });
+        n.removeAttribute('data-processed');
+        n.textContent = n.dataset.mermaidSrc;
+        try { await mermaid.run({ nodes: [n] }); }
+        catch (err) { n.textContent = n.dataset.mermaidSrc; n.removeAttribute('data-processed'); console.error('Kunde inte rendera Mermaid-diagram:', err); }
+      }
+    }).catch(err => console.error('Kunde inte rita om diagram:', err));
+    return queue;
   }
+
+  nodes.forEach(n => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'diagram-expand';
+    button.textContent = '⤢ Förstora diagram';
+    button.addEventListener('click', () => {
+      expanded.dataset.mermaidSrc = n.dataset.mermaidSrc;
+      dialog.showModal();
+      render([expanded]);
+    });
+    n.before(button);
+  });
+  document.getElementById('diagram-close').addEventListener('click', () => dialog.close());
+  document.getElementById('diagram-redraw').addEventListener('click', () => render([expanded]));
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => render(dialog.open ? [...nodes, expanded] : nodes), 250);
+  });
 
   await render();
   document.addEventListener('click', event => {
-    if (event.target.closest('[data-theme-toggle]')) setTimeout(render, 0);
+    if (event.target.closest('[data-theme-toggle]')) setTimeout(() => render(dialog.open ? [...nodes, expanded] : nodes), 0);
   });
 })();
 </script>
