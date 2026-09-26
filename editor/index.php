@@ -215,6 +215,24 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
             </div>
           </div>
 
+          <div class="editor-workspace">
+          <fieldset class="editor-group editor-group--content">
+            <legend>Innehåll</legend>
+            <div class="editor-content-toolbar">
+              <button class="btn btn--ghost" type="button" data-capability-link-picker data-targets-url="<?= h(base_path('editor/link_targets.php')) ?>" disabled>↗ Infoga förmågelänk</button>
+            </div>
+            <div class="editor-content-split">
+              <div class="editor-content-col">
+                <span class="editor-content-label">Markdown</span>
+                <input type="hidden" name="body" id="bodyInput" value="<?= h($body) ?>">
+                <textarea class="textarea" id="bodyFallback" style="display:none"><?= h($body) ?></textarea>
+                <div id="markdownEditor" class="editor-codehost"></div>
+              </div>
+            </div>
+          </fieldset>
+
+          <aside class="editor-metadata" aria-label="Metadata">
+            <h2>Metadata</h2>
           <fieldset class="editor-group">
             <legend>Identitet</legend>
             <div class="editor-fields">
@@ -266,24 +284,8 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
             </div>
           </fieldset>
 
-          <fieldset class="editor-group editor-group--content">
-            <legend>Innehåll</legend>
-            <div class="editor-content-toolbar">
-              <button class="btn btn--ghost" type="button" data-capability-link-picker data-targets-url="<?= h(base_path('editor/link_targets.php')) ?>" disabled>↗ Infoga förmågelänk</button>
-            </div>
-            <div class="editor-content-split">
-              <div class="editor-content-col">
-                <span class="editor-content-label">Markdown</span>
-                <input type="hidden" name="body" id="bodyInput" value="<?= h($body) ?>">
-                <textarea class="textarea" id="bodyFallback" style="display:none"><?= h($body) ?></textarea>
-                <div id="markdownEditor" class="editor-codehost" data-render-url="render.php<?= h($mapQuery) ?>"></div>
-              </div>
-              <div class="editor-content-col">
-                <span class="editor-content-label">Förhandsgranskning</span>
-                <div class="editor-preview prose" id="preview" style="max-width:none"></div>
-              </div>
-            </div>
-          </fieldset>
+          </aside>
+          </div>
 
           <div class="editor-footer-actions">
             <a class="btn btn--ghost" href="download.php?file=<?= rawurlencode($rel) ?>" download="<?= h(basename($rel)) ?>" title="Ladda ner markdown-filen">⬇ Ladda ner</a>
@@ -334,9 +336,7 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
           const bodyInput = document.getElementById("bodyInput");
           const fallbackTa = document.getElementById("bodyFallback");
           const editorHost = document.getElementById("markdownEditor");
-          const pv = document.getElementById("preview");
           const form = document.getElementById("capForm");
-          const renderUrl = editorHost.dataset.renderUrl;
           let hasUnsavedChanges = false;
           const originalContent = bodyInput.value;
           let monacoEditor = null;
@@ -373,21 +373,10 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
             bodyInput.value = value;
           }
 
-          async function render(){
-            const fd = new FormData();
-            const currentValue = getBodyValue();
-            setBodyValue(currentValue);
-            fd.set("md", currentValue);
-            const res = await fetch(renderUrl, {method:"POST", body: fd});
-            pv.innerHTML = await res.text();
-          }
-
           function handleBodyInput(){
             const currentValue = getBodyValue();
             setBodyValue(currentValue);
             hasUnsavedChanges = (currentValue !== originalContent);
-            window.clearTimeout(window.__pvT);
-            window.__pvT=setTimeout(render, 150);
           }
 
           function initFallback(){
@@ -443,7 +432,6 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
           initMonaco().then((ok) => {
             if (!ok) initFallback();
             document.querySelector("[data-capability-link-picker]").disabled = false;
-            render();
           });
 
           const inputs = form.querySelectorAll("input, select, textarea");

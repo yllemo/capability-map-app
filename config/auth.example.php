@@ -2,6 +2,7 @@
 
 /**
  * Editor accounts.
+ * Copy this example to config/auth.php and edit that file for your installation.
  *
  * ADDING A USER
  * 1. Generate a password hash (run once, anywhere PHP is available):
@@ -13,6 +14,22 @@
  * 3. Reference the same username in config/acl.php to control which
  *    capability maps ("förmågekartor") that person may read or edit.
  *
+ * ADMINISTRATORS / ADMIN-GRUPP
+ * Add 'role' => 'admin' to each administrator under 'users' in config/auth.php.
+ * There is no separate 'admins' or 'groups' setting: the role on each account
+ * controls access to /admin/ and visibility of the Admin navigation link.
+ * Use 'role' => 'editor' for ordinary accounts. See Anna and Erik below.
+ * Multiple accounts can have the admin role; usernames can be freely chosen.
+ * When role is omitted, usernames 'admin' and 'editor' default to admin for
+ * backwards compatibility; all other usernames default to editor.
+ * The legacy shared-password account 'editor' also has administrator access.
+ * An administrator role does not override map permissions in config/acl.php.
+ *
+ * Changes saved through /admin/ are stored in content/.capmap-admin.php.
+ * A user entry there overrides the entire matching entry in config/auth.php,
+ * including role and password. For such accounts, change the role through
+ * Admin > Användare or update the corresponding persistent override.
+ *
  * LEGACY SINGLE PASSWORD
  * Older installs used one shared 'editor_password' for everyone. It still
  * works — anyone who enters it logs in as the built-in "editor" user — so
@@ -23,10 +40,12 @@ return [
   'users' => [
     // 'anna' => [
     //   'name' => 'Anna Andersson',
+    //   'role' => 'admin', // Can manage users and settings at /admin/.
     //   'password_hash' => '$2y$10$replace.with.a.real.bcrypt.hash.generated.above',
     // ],
     // 'erik' => [
     //   'name' => 'Erik Eriksson',
+    //   'role' => 'editor', // No access to /admin/.
     //   'password' => 'a-plain-password-only-for-low-risk-installs',
     // ],
   ],
