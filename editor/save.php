@@ -91,6 +91,20 @@ if ($tags !== '') {
 $yaml .= "maturity: " . $maturity . "\n";
 $yaml .= "criticality: " . $criticality . "\n";
 $yaml .= "updated: " . $updated . "\n";
+// Keep the template's Swedish metadata alongside the app's canonical fields.
+if (($_POST['capability_template'] ?? '') === '1' || ($parsed['meta']['typ'] ?? '') === 'förmågebeskrivning') {
+  $extra = $_POST['template_meta'] ?? [];
+  if (!is_array($extra)) { http_response_code(400); exit('Ogiltiga mallfält.'); }
+  $templateMeta = ['namn'=>$name, 'typ'=>'förmågebeskrivning',
+    'skikt'=>['ledning_styrning'=>'styrande', 'karnprocesser'=>'kärnverksamhet', 'verksamhetsstod'=>'stödjande'][$layer] ?? $layer,
+    'nivå'=>'L' . $level, 'förmågeägare'=>$owner];
+  foreach (['överordnad_förmåga', 'version', 'senast_granskad', 'granskad_av', 'notation'] as $key) {
+    $value = $extra[$key] ?? $parsed['meta'][$key] ?? '';
+    if (!is_scalar($value)) { http_response_code(400); exit('Ogiltigt mallfält.'); }
+    $templateMeta[$key] = preg_replace('/\R/u', ' ', (string)$value);
+  }
+  foreach ($templateMeta as $key=>$value) $yaml .= $key . ': ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
+}
 $yaml .= "---\n\n";
 
 $content = $yaml . $body;

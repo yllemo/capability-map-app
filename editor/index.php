@@ -219,6 +219,7 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
           <fieldset class="editor-group editor-group--content">
             <legend>Innehåll</legend>
             <div class="editor-content-toolbar">
+              <button class="btn btn--secondary" type="button" id="apply-capability-template" disabled>Använd förmågemall</button>
               <button class="btn btn--ghost" type="button" data-capability-link-picker data-targets-url="<?= h(base_path('editor/link_targets.php')) ?>" disabled>↗ Infoga förmågelänk</button>
             </div>
             <div class="editor-content-split">
@@ -233,6 +234,14 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
 
           <aside class="editor-metadata" aria-label="Metadata">
             <h2>Metadata</h2>
+            <?php $templateActive = ($meta['typ'] ?? '') === 'förmågebeskrivning'; ?>
+            <input type="hidden" name="capability_template" id="capability-template" value="<?= $templateActive ? '1' : '0' ?>">
+            <fieldset class="editor-group" id="template-fields" <?= $templateActive ? '' : 'hidden' ?>>
+              <legend>Förmågemall · granskning</legend><div class="editor-fields">
+              <?php foreach (['överordnad_förmåga'=>'Överordnad förmåga', 'version'=>'Version', 'senast_granskad'=>'Senast granskad', 'granskad_av'=>'Granskad av', 'notation'=>'Notation'] as $key=>$label): ?>
+                <div class="editor-field editor-field--wide"><label for="template-<?= h($key) ?>"><?= h($label) ?></label><input class="input" id="template-<?= h($key) ?>" name="template_meta[<?= h($key) ?>]" value="<?= h((string)($meta[$key] ?? '')) ?>"></div>
+              <?php endforeach; ?></div>
+            </fieldset>
           <fieldset class="editor-group">
             <legend>Identitet</legend>
             <div class="editor-fields">
@@ -340,6 +349,26 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
           let hasUnsavedChanges = false;
           const originalContent = bodyInput.value;
           let monacoEditor = null;
+          const templateBody = <?= json_encode(App\Frontmatter::parse((string)file_get_contents(__DIR__ . '/../app/templates/capabilities/business-capability.md'))['body'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
+          document.getElementById('apply-capability-template').addEventListener('click', () => {
+            if (getBodyValue().trim() && !confirm('Ersätta Markdown-innehållet med förmågemallen? Befintligt ID, namn och metadata behålls. Inget sparas förrän du klickar på Spara.')) return;
+            const value = templateBody.replace('# <namn på verksamhetsförmågan>', '# ' + (form.elements.name.value.trim() || '<namn på verksamhetsförmågan>'));
+            if (monacoEditor) {
+              monacoEditor.pushUndoStop();
+              monacoEditor.executeEdits('capability-template', [{range: monacoEditor.getModel().getFullModelRange(), text: value}]);
+              monacoEditor.pushUndoStop();
+            } else { fallbackTa.value = value; }
+            document.getElementById('capability-template').value = '1';
+            document.getElementById('template-fields').hidden = false;
+            const defaults = {'version':'0.1', 'notation':'ArchiMate 4 (C260), modern färgpalett'};
+            Object.entries(defaults).forEach(([key, value]) => {
+              const field = form.elements.namedItem('template_meta[' + key + ']');
+              if (!field.value) field.value = value;
+            });
+            if (!form.elements.status.value) form.elements.status.value = 'planerad';
+            handleBodyInput();
+            hasUnsavedChanges = true;
+          });
           let linkSelection = null;
           document.addEventListener("capability-link-open", event => {
             if (monacoEditor) {
@@ -432,6 +461,7 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
           initMonaco().then((ok) => {
             if (!ok) initFallback();
             document.querySelector("[data-capability-link-picker]").disabled = false;
+            document.getElementById('apply-capability-template').disabled = false;
           });
 
           const inputs = form.querySelectorAll("input, select, textarea");

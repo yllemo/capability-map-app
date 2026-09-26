@@ -156,6 +156,24 @@ open http://localhost:8080/view/index.php
 Nedladdningsikonen bredvid **Redigera** hämtar förmågan som `.md`, inklusive
 hela originalets metadata och brödtext.
 
+### Förmågemall i editorn
+
+Öppna en förmåga i `/editor/index.php` och klicka på **Använd förmågemall**
+bredvid **Infoga förmågelänk**. Mallen fyller Markdown-editorn med faktablock,
+domänavsnitt, kontrollfrågor, ArchiMate-mappning och ett Mermaid-diagram.
+Om innehåll redan finns får du bekräfta att det ska ersättas. Ändringarna
+skrivs till fil först när du klickar på **Spara**. I Monaco kan textbytet ångras.
+
+Befintligt ID, namn och metadata behålls. Namnet används i mallens huvudrubrik.
+Metadata-panelen får extra fält för överordnad förmåga, version, senast granskad,
+granskad av och notation. Vid sparning skrivs dessa tillsammans med appens
+vanliga fält. Mallens `namn`, `skikt`, `nivå` och `förmågeägare` synkroniseras
+från `name`, `layer`, `level` och `owner`; `typ` sätts till `förmågebeskrivning`.
+Faktablockets platshållare och diagrammets exempel fylls i manuellt.
+
+Mallen finns i `app/templates/capabilities/business-capability.md`.
+Test av mallinnehåll och svenska YAML-fältnamn: `php tests/capability_template.php`.
+
 ### Interna länkar i Markdown-editorn
 
 Klicka på **Infoga förmågelänk** ovanför Markdown-editorn, sök på namn, ID eller
@@ -205,7 +223,7 @@ spärrad för referensfiler för att behålla deras minimala format.
 ### Editor (`/editor/index.php`)
 - 🎨 Samma nya gränssnitt som kartans nya vy (`site-header`, ljust/mörkt tema, kort-baserad layout)
 - 🔍 Sökbar förmågelista i sidopanelen – filtrera på namn, ID, område eller filväg medan du skriver
-- ✏️ Markdown-editor (Monaco) med live preview
+- ✏️ Markdown-editor (Monaco) med metadata i en separat panel till höger, under editorn på mindre skärmar. Förhandsgranskningen är borttagen; använd **Öppna i viewer** för att se den sparade förmågan.
 - 📝 YAML frontmatter-redigering i tydligt grupperade fält (Identitet, Klassificering, Ägarskap & status)
 - ➕ Skapa nya capabilities (`/editor/new.php`), inklusive referenskort och JSON-import
 - 🗑️ Radera filer med bekräftelse

@@ -36,7 +36,7 @@ final class Frontmatter {
       if ($line === '' || str_starts_with(ltrim($line), '#')) { $i++; continue; }
 
       // key: value or key:
-      if (preg_match('/^([A-Za-z0-9_\-]+):\s*(.*)$/', $line, $m)) {
+      if (preg_match('/^([\p{L}\p{N}_\-]+):\s*(.*)$/u', $line, $m)) {
         $key = $m[1];
         $rest = $m[2];
 
@@ -52,7 +52,7 @@ final class Frontmatter {
         while ($i < count($lines)) {
           $l = rtrim($lines[$i]);
           if ($l === '') { $i++; continue; }
-          if (preg_match('/^([A-Za-z0-9_\-]+):\s*/', $l)) break; // next top-level
+          if (preg_match('/^([\p{L}\p{N}_\-]+):\s*/u', $l)) break; // next top-level
 
           // list item "- x" or "- key: val"
           if (preg_match('/^\s*-\s*(.*)$/', $l, $mm)) {
@@ -64,7 +64,7 @@ final class Frontmatter {
             }
 
             // object-in-list start "- name: X"
-            if (preg_match('/^([A-Za-z0-9_\-]+):\s*(.*)$/', $itemRest, $kv)) {
+            if (preg_match('/^([\p{L}\p{N}_\-]+):\s*(.*)$/u', $itemRest, $kv)) {
               $obj = [];
               $obj[$kv[1]] = self::parseScalar($kv[2]);
               $i++;
@@ -73,7 +73,7 @@ final class Frontmatter {
                 $l2 = rtrim($lines[$i]);
                 if ($l2 === '') { $i++; continue; }
                 if (preg_match('/^\s*-\s*/', $l2)) break;
-                if (preg_match('/^\s{2,}([A-Za-z0-9_\-]+):\s*(.*)$/', $l2, $kv2)) {
+                if (preg_match('/^\s{2,}([\p{L}\p{N}_\-]+):\s*(.*)$/u', $l2, $kv2)) {
                   $obj[$kv2[1]] = self::parseScalar($kv2[2]);
                   $i++;
                   continue;
