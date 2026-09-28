@@ -21,6 +21,12 @@ final class Auth {
     return (string)(\cfg('auth')['cookie_name'] ?? 'capmap_editor');
   }
 
+  /** Endpoint-only identity after validating its API credential; no login cookie. */
+  public static function useRequestIdentity(string $username): void {
+    if (!self::knownUser($username)) throw new \InvalidArgumentException('Unknown account.');
+    self::$resolved = ['user'=>$username];
+  }
+
   public static function ttl(): int {
     return (int)(\cfg('auth')['cookie_ttl'] ?? 60 * 60 * 8);
   }

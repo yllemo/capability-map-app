@@ -202,16 +202,17 @@ $saveUrl = base_path('ai/save.php');
           }
 
           async function mcpCall(method, params){
+            const name = method.replace('/', '_');
             const res = await fetch(mcpPath, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ method, params: params || {} }),
+              headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "MCP-Protocol-Version": "2026-07-28", "Mcp-Method": "tools/call", "Mcp-Name": name },
+              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: { ...params, map: <?= json_encode($selectedKey) ?> }, _meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientCapabilities": {}, "io.modelcontextprotocol/clientInfo": { name: "capmap-ai", version: "2.0.0" } } } }),
             });
             const data = await res.json();
-            if(!res.ok || data.error){
-              throw new Error(data.error || ("MCP fel (" + res.status + ")"));
+            if(!res.ok || data.error || data.result?.isError){
+              throw new Error(data.error?.message || data.result?.content?.[0]?.text || ("MCP fel (" + res.status + ")"));
             }
-            return data;
+            return data.result.structuredContent;
           }
 
           async function loadMarkdownFromMcp(){

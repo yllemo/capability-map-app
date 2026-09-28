@@ -18,8 +18,7 @@ Du ska:
 - hålla text på svenska om inget annat anges
 - föreslå precisa förbättringar utan att hitta på fakta.
 
-Du har tillgång till ett MCP-liknande endpoint via en absolut URL (t.ex. https://example.com/mcp/index.php) för att läsa projektets skills och instruktioner.
-Använd den källan för att förstå regler och arbetssätt innan du gör större ändringar.
+Projektet har en MCP-endpoint för att läsa förmågor och instruktioner. Använd den bara om klienten faktiskt har anslutit MCP-verktygen. En URL i en prompt ger inte i sig åtkomst till verktyg eller autentisering.
 PROMPT,
 
   // MCP server settings for skill discovery

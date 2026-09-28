@@ -71,6 +71,8 @@ final class CapabilityRepository {
   private function iterateMarkdownFiles(string $dir): array {
     $out = [];
     if (!is_dir($dir)) return $out;
+    $root = realpath($dir);
+    if ($root === false) return $out;
     $entries = new \RecursiveCallbackFilterIterator(
       new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
       fn($entry) => !($entry->isDir() && str_starts_with($entry->getFilename(), '.capmap-import-'))
@@ -78,7 +80,9 @@ final class CapabilityRepository {
     $it = new \RecursiveIteratorIterator($entries);
     foreach ($it as $f) {
       /** @var \SplFileInfo $f */
-      if (!$f->isFile()) continue;
+      if (!$f->isFile() || $f->isLink()) continue;
+      $real = $f->getRealPath();
+      if ($real === false || !str_starts_with($real, rtrim($root, '/\\') . DIRECTORY_SEPARATOR)) continue;
       $ext = strtolower($f->getExtension());
       if ($ext !== 'md' && $ext !== 'markdown') continue;
       $out[] = $f->getPathname();

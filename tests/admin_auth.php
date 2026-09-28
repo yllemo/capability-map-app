@@ -7,7 +7,6 @@ function base_path(string $path = ''): string { return '/' . ltrim($path, '/'); 
 function check(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
 function resetAuth(): void {
   $property = new ReflectionProperty(App\Auth::class, 'resolved');
-  $property->setAccessible(true);
   $property->setValue(null, null);
 }
 function loginCookie(string $user, string $version = ''): void {

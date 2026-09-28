@@ -1,137 +1,34 @@
 <?php
 require __DIR__ . '/../editor/_auth.php';
 require_auth();
-header('Content-Type: text/html; charset=UTF-8');
-
-$mcpUrl = base_path('mcp/index.php');
-$mcpAbsoluteUrl = absolute_url('mcp/index.php');
+$title = 'MCP-test'; $activeNav = 'ai';
+ob_start();
 ?>
-<!doctype html>
-<html lang="sv">
-<head>
-  <?php require __DIR__ . '/../app/templates/favicon.php'; ?>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MCP Test</title>
-  <link rel="stylesheet" href="<?= h(base_path('assets/app.css')) ?>">
-  <style>
-    body { padding: 20px; max-width: 1100px; margin: 0 auto; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-    pre { max-height: 55vh; overflow: auto; margin: 0; }
-    .muted { font-size: 12px; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="card__hd">
-      <strong>MCP Testverktyg</strong>
-      <a class="btn btn--ghost" href="<?= h(base_path('ai/index.php')) ?>">Till AI</a>
-    </div>
-    <div class="card__bd">
-      <p class="muted">
-        Endpoint (relativ): <code><?= h($mcpUrl) ?></code><br>
-        Endpoint (absolut): <code><?= h($mcpAbsoluteUrl) ?></code>
-      </p>
-
-      <div class="row">
-        <button class="btn btn--secondary" id="btnGet">GET info</button>
-        <button class="btn btn--secondary" id="btnTools">POST tools/list</button>
-        <button class="btn btn--secondary" id="btnSkills">POST skills/list</button>
-        <button class="btn btn--secondary" id="btnReadFirst">POST skills/read (första)</button>
-        <button class="btn btn--secondary" id="btnCaps">POST capabilities/list</button>
-        <button class="btn btn--secondary" id="btnCapReadFirst">POST capabilities/read (första)</button>
-        <button class="btn btn--ghost" id="btnClear">Rensa</button>
-      </div>
-
-      <div class="card">
-        <div class="card__hd"><strong>Resultat</strong></div>
-        <div class="card__bd">
-          <pre id="output" class="prose">Klicka på ett test.</pre>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    (function () {
-      const mcpUrl = <?= json_encode($mcpUrl) ?>;
-      const output = document.getElementById('output');
-
-      function print(title, data) {
-        const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-        output.textContent = `[${new Date().toLocaleTimeString()}] ${title}\n${text}\n\n` + output.textContent;
-      }
-
-      async function callGet() {
-        const res = await fetch(mcpUrl, { method: 'GET' });
-        const text = await res.text();
-        let parsed = text;
-        try { parsed = JSON.parse(text); } catch (e) {}
-        print(`GET ${mcpUrl} (${res.status})`, parsed);
-        return parsed;
-      }
-
-      async function callPost(method, params) {
-        const res = await fetch(mcpUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method, params: params || {} })
-        });
-        const text = await res.text();
-        let parsed = text;
-        try { parsed = JSON.parse(text); } catch (e) {}
-        print(`POST ${method} (${res.status})`, parsed);
-        return parsed;
-      }
-
-      document.getElementById('btnGet').addEventListener('click', async () => {
-        try { await callGet(); } catch (e) { print('GET error', String(e)); }
-      });
-
-      document.getElementById('btnTools').addEventListener('click', async () => {
-        try { await callPost('tools/list'); } catch (e) { print('tools/list error', String(e)); }
-      });
-
-      document.getElementById('btnSkills').addEventListener('click', async () => {
-        try { await callPost('skills/list'); } catch (e) { print('skills/list error', String(e)); }
-      });
-
-      document.getElementById('btnReadFirst').addEventListener('click', async () => {
-        try {
-          const list = await callPost('skills/list');
-          const firstId = list && list.skills && list.skills[0] && list.skills[0].id;
-          if (!firstId) {
-            print('skills/read', 'Inga skills hittades att läsa.');
-            return;
-          }
-          await callPost('skills/read', { id: firstId });
-        } catch (e) {
-          print('skills/read error', String(e));
-        }
-      });
-
-      document.getElementById('btnCaps').addEventListener('click', async () => {
-        try { await callPost('capabilities/list'); } catch (e) { print('capabilities/list error', String(e)); }
-      });
-
-      document.getElementById('btnCapReadFirst').addEventListener('click', async () => {
-        try {
-          const list = await callPost('capabilities/list');
-          const firstFile = list && list.capabilities && list.capabilities[0] && list.capabilities[0].file;
-          if (!firstFile) {
-            print('capabilities/read', 'Inga förmågor hittades att läsa.');
-            return;
-          }
-          await callPost('capabilities/read', { file: firstFile });
-        } catch (e) {
-          print('capabilities/read error', String(e));
-        }
-      });
-
-      document.getElementById('btnClear').addEventListener('click', () => {
-        output.textContent = 'Klicka på ett test.';
-      });
-    })();
-  </script>
-</body>
-</html>
+<h1>MCP-test</h1>
+<p>Testar riktig JSON-RPC via Streamable HTTP. Ange webbplatsens origin i MCP_ALLOWED_ORIGINS. Verktygen läser endast förmågor.</p>
+<div class="card"><div class="card__bd">
+<label>Metod <select id="rpc-method" class="select"><option>server/discover</option><option>tools/list</option><option>tools/call</option><option>ping</option></select></label>
+<label>Verktyg <select id="rpc-tool" class="select"><?php foreach (App\McpTools::definitions() as $tool): ?><option><?= h($tool['name']) ?></option><?php endforeach; ?></select></label>
+<label for="rpc-args">Argument (JSON)</label><textarea id="rpc-args" class="textarea" rows="5" style="width:100%">{}</textarea>
+<p>Exempel: <code>{"map":"content","id":"cap-1"}</code> för capabilities_read. maps_list visar tillgängliga kartnycklar.</p>
+<button type="button" class="btn btn--primary" id="rpc-run">Kör anrop</button>
+<pre id="rpc-output" style="white-space:pre-wrap;overflow-wrap:anywhere" role="status"></pre>
+</div></div>
+<script>
+document.getElementById('rpc-run').addEventListener('click', async () => {
+  const output = document.getElementById('rpc-output');
+  try {
+    const method = document.getElementById('rpc-method').value;
+    const params = {_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientCapabilities':{},'io.modelcontextprotocol/clientInfo':{name:'capmap-test',version:'2.0.0'}}};
+    const headers = {'Content-Type':'application/json','Accept':'application/json, text/event-stream','MCP-Protocol-Version':'2026-07-28','Mcp-Method':method};
+    if (method === 'tools/call') {
+      params.name = document.getElementById('rpc-tool').value;
+      params.arguments = JSON.parse(document.getElementById('rpc-args').value);
+      headers['Mcp-Name'] = params.name;
+    }
+    const response = await fetch(<?= json_encode(base_path('mcp/index.php')) ?>,{method:'POST',headers,body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});
+    output.textContent = 'HTTP ' + response.status + '\n' + JSON.stringify(await response.json(),null,2);
+  } catch (error) { output.textContent = error.message; }
+});
+</script>
+<?php $content = ob_get_clean(); require __DIR__ . '/../app/templates/layout.php'; ?>

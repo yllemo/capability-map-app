@@ -239,6 +239,88 @@ spärrad för referensfiler för att behålla deras minimala format.
   innan du klickar på **Skapa**. Beskrivning, mognad, länk och Markdown följer med;
   övriga förmågor i JSON-filen importeras inte.
 
+### MCP (`/mcp/index.php`)
+
+MCP-servern erbjuder läsverktyg via JSON-RPC 2.0 och Streamable HTTP med
+JSON-svar. Den implementerar revision **2026-07-28**, inklusive `server/discover`,
+versionsmetadata per anrop och validering av MCP-headers. Klienter med revision
+**2025-11-25** stöds via `initialize` utan serverutfärdat sessions-ID.
+GET och DELETE returnerar 405; SSE-strömmar, prenumerationer, skrivverktyg,
+prompts och resources annonseras inte.
+
+| Verktyg | Användning |
+|---|---|
+| `maps_list` | Kartor användaren får läsa, med kartnycklar. |
+| `capabilities_list` | Lista/sök med `map`, `query`, `tag`, `offset` och `limit` (1–100). Utelämna `map` för alla tillgängliga kartor. |
+| `capabilities_read` | Läs med explicit `map` och YAML-`id` eller relativ `file`. Returnerar Markdown och metadata, samt originalet för läsbara referenskort. |
+| `skills_list` | Lista konfigurerade instruktioner; kräver autentisering. |
+| `skills_read` | Läs instruktion med dess listade `id`; kräver autentisering. |
+
+Verktygsanrop görs via `tools/call`; de tidigare egna metoderna
+`capabilities/read`, `skills/list` osv. är ersatta. Förmågornas ID kommer nu
+från YAML, inte från filnamnet. Sökresultat innehåller `total` och `nextOffset`.
+Kartvalet beror inte på användarens senast valda karta i webbläsarsessionen.
+Inga filer skapas, uppdateras eller raderas av verktygen.
+
+Konfiguration finns i `config/mcp.php` och läser dessa miljövariabler
+(i OpenShift som miljövariabler/Secrets, eller lokalt i `config/.env`):
+
+```dotenv
+MCP_ALLOWED_ORIGINS=https://din-webbplats.se
+MCP_TOKEN_USER=mcp-reader
+MCP_TOKEN_SHA256=<sha256-av-en-slumpad-token>
+MCP_ALLOW_ANONYMOUS=0
+```
+
+`MCP_ALLOWED_ORIGINS` är en kommaseparerad lista av exakta origins, utan sökväg
+eller avslutande snedstreck, exempelvis `https://din-webbplats.se` även om appen
+ligger under `/cap`. Detta krävs även för AI-editorns och testverktygets
+webbläsaranrop. Saknad Origin tillåts för serverklienter, ogiltig Origin ger 403.
+
+Skapa kontot `mcp-reader` i Admin och ge det läsrättigheter i `config/acl.php`.
+Ange samma konto i `MCP_TOKEN_USER`. Generera en separat slumpad API-token och
+dess SHA-256, exempelvis med PHP CLI:
+
+```sh
+php -r '$t=bin2hex(random_bytes(32)); echo "Token: ",$t,PHP_EOL,"SHA256: ",hash("sha256",$t),PHP_EOL;'
+```
+
+Spara hashvärdet på servern och den ursprungliga token i klientens hemliga
+inställningar. Klienten skickar `Authorization: Bearer <token>` över HTTPS.
+Detta är **förkonfigurerad tokenautentisering, inte OAuth**: klienter som kräver
+OAuth-discovery kan inte ansluta automatiskt. Appens egna webbläsaranrop använder
+befintlig inloggningscookie. Utan inloggning/token returneras JSON-fel och HTTP 401,
+inte en omdirigering till HTML-inloggningen. `MCP_ALLOW_ANONYMOUS=1` öppnar endast
+kartor vars ACL tillåter anonyma läsare; instruktioner kräver alltid autentisering.
+Ta bort kontot eller rotera token för att återkalla API-åtkomst.
+
+Exempel på ett modernt anrop (byt kartnyckel efter `maps_list`):
+
+```http
+POST /mcp/index.php
+Content-Type: application/json
+Accept: application/json, text/event-stream
+Authorization: Bearer <token>
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: capabilities_list
+
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"capabilities_list","arguments":{"map":"content","tag":"styrning","limit":20},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{},"io.modelcontextprotocol/clientInfo":{"name":"my-client","version":"1.0"}}}}
+```
+
+För äldre klienter: skicka `initialize` med `protocolVersion: "2025-11-25"`,
+`clientInfo` och `capabilities`, därefter `notifications/initialized` och
+`MCP-Protocol-Version: 2025-11-25` på följande POST-anrop.
+
+Testa i `/mcp/test.php` efter inloggning, eller kör `php tests/mcp.php`.
+HTTP-integrationstest: sätt `MCP_TEST_URL` till endpointens URL och
+`MCP_TEST_TOKEN` till en giltig token och kör `node tests/mcp_http.mjs`.
+Det gör enbart läsanrop och kontroll av felhantering.
+Testerna omfattar bland annat protokollfel, schemaargument, YAML-ID, taggsökning,
+kartåtkomst, sökvägsbegränsning och äldre initiering.
+Specifikation: [versionering](https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning)
+och [Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http).
+
 ### AI Editor (`/ai/index.php`)
 
 Samma nya gränssnitt och sökbara förmågelista som `/editor/index.php`, men med
