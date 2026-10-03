@@ -293,6 +293,19 @@ $backTarget = base_path('view/overview.php' . $mapQuery);
             </div>
           </fieldset>
 
+          <?php $usageMaps = App\CapabilityReference::usageMaps($selectedKey, (string)($meta['id'] ?? ''), readable_content_dirs()); ?>
+          <section class="editor-usage" aria-labelledby="editor-usage-title">
+            <h2 id="editor-usage-title">Används i förmågekartor</h2>
+            <?php if ($usageMaps): ?>
+              <ul>
+                <?php foreach ($usageMaps as $usageMap): ?>
+                  <li><a href="<?= h(base_path('view/overview.php?map=' . rawurlencode($usageMap['map']))) ?>"><?= h($usageMap['label']) ?></a></li>
+                <?php endforeach; ?>
+              </ul>
+            <?php else: ?>
+              <p class="muted">Inga förmågekartor hittades.</p>
+            <?php endif; ?>
+          </section>
           </aside>
           </div>
 

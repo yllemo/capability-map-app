@@ -93,6 +93,8 @@ function cfg(string $name): array {
     }
   }
   if ($name === 'app') $result = array_replace($result, $admin['app'] ?? []);
+  if ($name === 'mcp') $result = array_replace($result, $admin['mcp'] ?? []);
+  if ($name === 'mcp') $result = array_replace($result, $admin['mcp'] ?? []);
   return $result;
 }
 

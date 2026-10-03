@@ -241,11 +241,11 @@ spärrad för referensfiler för att behålla deras minimala format.
 
 ### MCP (`/mcp/index.php`)
 
-MCP-servern erbjuder läsverktyg via JSON-RPC 2.0 och Streamable HTTP med
+MCP-servern erbjuder läs- och uppdateringsverktyg via JSON-RPC 2.0 och Streamable HTTP med
 JSON-svar. Den implementerar revision **2026-07-28**, inklusive `server/discover`,
 versionsmetadata per anrop och validering av MCP-headers. Klienter med revision
 **2025-11-25** stöds via `initialize` utan serverutfärdat sessions-ID.
-GET och DELETE returnerar 405; SSE-strömmar, prenumerationer, skrivverktyg,
+GET och DELETE returnerar 405; SSE-strömmar, prenumerationer,
 prompts och resources annonseras inte.
 
 | Verktyg | Användning |
@@ -253,6 +253,7 @@ prompts och resources annonseras inte.
 | `maps_list` | Kartor användaren får läsa, med kartnycklar. |
 | `capabilities_list` | Lista/sök med `map`, `query`, `tag`, `offset` och `limit` (1–100). Utelämna `map` för alla tillgängliga kartor. |
 | `capabilities_read` | Läs med explicit `map` och YAML-`id` eller relativ `file`. Returnerar Markdown och metadata, samt originalet för läsbara referenskort. |
+| `capabilities_update` | Uppdatera en befintlig originalförmåga med `map`, `id`, `markdown` och `expected_sha256` (värdet `sha256` från senaste läsningen). Kräver API-nyckel och redigeringsbehörighet. |
 | `skills_list` | Lista konfigurerade instruktioner; kräver autentisering. |
 | `skills_read` | Läs instruktion med dess listade `id`; kräver autentisering. |
 
@@ -260,7 +261,22 @@ Verktygsanrop görs via `tools/call`; de tidigare egna metoderna
 `capabilities/read`, `skills/list` osv. är ersatta. Förmågornas ID kommer nu
 från YAML, inte från filnamnet. Sökresultat innehåller `total` och `nextOffset`.
 Kartvalet beror inte på användarens senast valda karta i webbläsarsessionen.
-Inga filer skapas, uppdateras eller raderas av verktygen.
+Uppdateringsverktyget ersätter originalförmågans Markdown och behåller dess ID.
+Länkade kort uppdateras via sitt original. Ett ändrat dokument ger konflikt;
+läs dokumentet på nytt innan ett nytt uppdateringsförsök. Inga förmågefiler skapas eller raderas.
+
+### Skapa API-nyckel
+
+Öppna **Admin → MCP**, välj en användare med redigeringsbehörighet och klicka
+på **Skapa API-nyckel**. Kopiera nyckeln direkt; den visas bara vid skapandet.
+Endast SHA-256-hashen sparas i administratörsinställningarna. En ny nyckel
+ersätter den tidigare, och **Återkalla API-nyckel** stänger av den aktiva nyckeln.
+Nyckeln får den valda användarens kartbehörigheter. Borttaget konto ger inte
+längre API-åtkomst. Inställningarna i Admin har företräde framför miljövariablerna.
+
+Läsning kräver ingen nyckel och följer kartornas läsbehörigheter i `config/acl.php`.
+Skyddade kartor och instruktioner kräver fortfarande autentisering.
+Uppdateringar kräver alltid en giltig API-nyckel; en inloggningscookie räcker inte.
 
 Konfiguration finns i `config/mcp.php` och läser dessa miljövariabler
 (i OpenShift som miljövariabler/Secrets, eller lokalt i `config/.env`):
@@ -269,7 +285,6 @@ Konfiguration finns i `config/mcp.php` och läser dessa miljövariabler
 MCP_ALLOWED_ORIGINS=https://din-webbplats.se
 MCP_TOKEN_USER=mcp-reader
 MCP_TOKEN_SHA256=<sha256-av-en-slumpad-token>
-MCP_ALLOW_ANONYMOUS=0
 ```
 
 `MCP_ALLOWED_ORIGINS` är en kommaseparerad lista av exakta origins, utan sökväg
@@ -289,9 +304,9 @@ Spara hashvärdet på servern och den ursprungliga token i klientens hemliga
 inställningar. Klienten skickar `Authorization: Bearer <token>` över HTTPS.
 Detta är **förkonfigurerad tokenautentisering, inte OAuth**: klienter som kräver
 OAuth-discovery kan inte ansluta automatiskt. Appens egna webbläsaranrop använder
-befintlig inloggningscookie. Utan inloggning/token returneras JSON-fel och HTTP 401,
-inte en omdirigering till HTML-inloggningen. `MCP_ALLOW_ANONYMOUS=1` öppnar endast
-kartor vars ACL tillåter anonyma läsare; instruktioner kräver alltid autentisering.
+befintlig inloggningscookie för läsning. Utan inloggning/token kan klienten läsa
+kartor vars ACL tillåter anonyma läsare. Ogiltig nyckel ger HTTP 401 och JSON-fel;
+instruktioner kräver alltid autentisering. `MCP_ALLOW_ANONYMOUS` behövs inte längre.
 Ta bort kontot eller rotera token för att återkalla API-åtkomst.
 
 Exempel på ett modernt anrop (byt kartnyckel efter `maps_list`):

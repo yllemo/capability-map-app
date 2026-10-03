@@ -6,5 +6,4 @@ return [
   // Store SHA-256 of a random token, never a user's password.
   'token_sha256' => getenv('MCP_TOKEN_SHA256') ?: '',
   'token_user' => getenv('MCP_TOKEN_USER') ?: '',
-  'allow_anonymous' => getenv('MCP_ALLOW_ANONYMOUS') === '1',
 ];

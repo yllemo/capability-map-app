@@ -3,8 +3,10 @@ require __DIR__ . '/../editor/_auth.php';
 if (current_user() === null) { require_auth(); }
 if (!App\Auth::isAdministrator()) access_denied('Administratörsbehörighet krävs.');
 header('Content-Type: text/html; charset=UTF-8');
+header('Cache-Control: no-store');
 $error = '';
-$tabs = ['site'=>'Webbplats', 'maps'=>'Kartor', 'users'=>'Användare'];
+$generatedKey = '';
+$tabs = ['site'=>'Webbplats', 'maps'=>'Kartor', 'users'=>'Användare', 'mcp'=>'MCP'];
 $requestedTab = $_GET['tab'] ?? 'site';
 $tab = is_string($requestedTab) && isset($tabs[$requestedTab]) ? $requestedTab : 'site';
 $field = static function(string $key): string {
@@ -16,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   try {
     if (!csrf_verify($field('csrf_token'))) throw new RuntimeException('Sessionen har gått ut. Ladda om sidan.');
     $action = $field('action');
-    $tab = in_array($action, ['user', 'delete'], true) ? 'users' : ($action === 'maps' ? 'maps' : 'site');
-    App\AdminSettings::update(function(array $data) use ($field, $action): array {
+    $tab = str_starts_with($action, 'mcp_') ? 'mcp' : (in_array($action, ['user', 'delete'], true) ? 'users' : ($action === 'maps' ? 'maps' : 'site'));
+    App\AdminSettings::update(function(array $data) use ($field, $action, &$generatedKey): array {
       if ($action === 'settings') {
         $name = $field('site_name');
         $interface = $field('default_interface');
@@ -67,12 +69,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $user['session_version'] = bin2hex(random_bytes(16));
           $data['users'][$username] = $user;
         }
+      } elseif ($action === 'mcp_create') {
+        $username = $field('token_user');
+        if (!in_array($username, App\Auth::loginableUsers(), true)) throw new RuntimeException('Välj en befintlig användare.');
+        if (!App\Acl::editableMaps(get_content_dirs(), $username)) throw new RuntimeException('Användaren behöver redigeringsbehörighet till minst en karta.');
+        $generatedKey = bin2hex(random_bytes(32));
+        $data['mcp'] = ['token_user'=>$username, 'token_sha256'=>hash('sha256', $generatedKey)];
+      } elseif ($action === 'mcp_revoke') {
+        $data['mcp'] = ['token_user'=>'', 'token_sha256'=>''];
       } else throw new RuntimeException('Okänd åtgärd.');
       return $data;
     });
     if ($action === 'user' && $field('username') === current_user()) App\Auth::issueCookie(current_user());
-    header('Location: ' . base_path('admin/index.php?tab=' . $tab . '&saved=1')); exit;
-  } catch (Throwable $e) { $error = $e->getMessage(); }
+    if ($generatedKey === '') { header('Location: ' . base_path('admin/index.php?tab=' . $tab . '&saved=1')); exit; }
+  } catch (Throwable $e) { $generatedKey = ''; $error = $e->getMessage(); }
 }
 ?>
 <!doctype html>
@@ -123,6 +133,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <button class="btn btn--primary">Spara inställningar</button>
 <p>Överordnad karta påverkar endast kartväljarnas visning. Underliggande kartor visas indragna efter sin överordnade karta. Högst två nivåer; inga filer flyttas.</p>
 </form></div></section>
+<?php elseif ($tab === 'mcp'): ?>
+<section class="card"><div class="card__bd">
+<h2>MCP och API-nyckel</h2>
+<p>Läsning via MCP kräver ingen nyckel och följer kartornas läsbehörigheter. Uppdateringar kräver en API-nyckel och den valda användarens redigeringsbehörighet. En webbläsarinloggning räcker inte för uppdateringar via MCP.</p>
+<p>Endpoint: <code><?= h(absolute_url('mcp/index.php')) ?></code> · <a href="<?= h(base_path('mcp/test.php')) ?>">Testa MCP</a></p>
+<?php if ($generatedKey !== ''): ?>
+<div class="admin-notice" role="status"><strong>API-nyckeln har skapats.</strong><p>Kopiera nyckeln nu. Den visas endast här, vid skapandet.</p><label>API-nyckel <input class="input" readonly value="<?= h($generatedKey) ?>" autocomplete="off" spellcheck="false"></label></div>
+<?php endif; ?>
+<?php $mcpConfig = cfg('mcp'); $keyExists = ($mcpConfig['token_sha256'] ?? '') !== ''; ?>
+<p><?= $keyExists ? 'Aktiv nyckel för användare: ' . h($mcpConfig['token_user'] ?? '') : 'Ingen aktiv API-nyckel.' ?></p>
+<form method="post" class="grid" style="gap:12px">
+<?= csrf_field() ?><input type="hidden" name="action" value="mcp_create">
+<label>Användare för nyckeln <select class="select" name="token_user" required>
+<?php foreach (App\Auth::loginableUsers() as $username): if (!App\Acl::editableMaps(get_content_dirs(), $username)) continue; ?>
+<option value="<?= h($username) ?>" <?= ($mcpConfig['token_user'] ?? current_user()) === $username ? 'selected' : '' ?>><?= h($username) ?></option>
+<?php endforeach; ?></select></label>
+<p>En ny nyckel ersätter den tidigare. Endast nyckelns hash sparas på servern.</p>
+<button class="btn btn--primary"><?= $keyExists ? 'Skapa ny nyckel och ersätt tidigare' : 'Skapa API-nyckel' ?></button>
+</form>
+<?php if ($keyExists): ?><form method="post" style="margin-top:16px"><?= csrf_field() ?><input type="hidden" name="action" value="mcp_revoke"><button class="btn">Återkalla API-nyckel</button></form><?php endif; ?>
+<p>Skicka nyckeln i klientens HTTP-header: <code>Authorization: Bearer &lt;nyckel&gt;</code>. Läs förmågan med <code>capabilities_read</code> och skicka dess <code>sha256</code> som <code>expected_sha256</code> till <code>capabilities_update</code> tillsammans med karta, ID och uppdaterad Markdown.</p>
+</div></section>
 <?php elseif ($tab === 'users'): ?>
 <h2>Användare</h2><p>Administratörer kan hantera denna sida. Läs- och redigeringsbehörigheter för kartor styrs fortsatt i config/acl.php.</p>
 <?php foreach (App\Auth::users() + [''=>[]] as $username=>$user): ?>

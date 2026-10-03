@@ -13,7 +13,22 @@ let response = await rpc('server/discover');
 assert.equal(response.status,200);
 assert.ok((await response.json()).result.supportedVersions.includes('2026-07-28'));
 response = await rpc('tools/list');
-assert.equal((await response.json()).result.tools.length,5);
+assert.equal((await response.json()).result.tools.length,6);
+response = await rpc('tools/list',{}, {Authorization:''});
+assert.equal(response.status,200, 'Anonymous discovery works without a key');
+response = await rpc('tools/call',{name:'maps_list',arguments:{}}, {Authorization:''});
+assert.equal(response.status,200);
+const publicMaps = (await response.json()).result.structuredContent.maps;
+if (publicMaps.length) {
+  response = await rpc('tools/call',{name:'capabilities_list',arguments:{map:publicMaps[0].map,limit:1}}, {Authorization:''});
+  const publicCaps = (await response.json()).result.structuredContent.capabilities;
+  if (publicCaps.length) {
+    response = await rpc('tools/call',{name:'capabilities_read',arguments:{map:publicMaps[0].map,id:publicCaps[0].id}}, {Authorization:''});
+    assert.equal((await response.json()).result.isError,false, 'Anonymous capability read');
+  }
+  response = await rpc('tools/call',{name:'capabilities_update',arguments:{map:publicMaps[0].map,id:'none',markdown:'test',expected_sha256:'0'.repeat(64)}}, {Authorization:''});
+  assert.equal((await response.json()).result.isError,true, 'Anonymous write denied');
+}
 response = await rpc('tools/call',{name:'maps_list',arguments:{}});
 const maps = (await response.json()).result.structuredContent.maps;
 if (maps.length) {

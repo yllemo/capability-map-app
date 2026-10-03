@@ -39,6 +39,8 @@ config/ai.local.php
 # Backup files
 *.bak
 *.backup
+*.mcp.lock
+*.mcp.lock
 
 # Composer (if used in future)
 vendor/

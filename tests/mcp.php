@@ -17,10 +17,26 @@ try {
   check($status===200 && $response['result']->resultType==='complete','Discovery');
   check($response['id']===7,'Preserve RPC ID');
   [$status,$response] = $call('tools/list');
-  check(count($response['result']->tools)===5,'Tool definitions');
+  check(count($response['result']->tools)===6,'Tool definitions');
   foreach ($response['result']->tools as $tool) check($tool['inputSchema']['properties'] instanceof stdClass,'Schema properties are objects');
   [$status,$response] = $call('tools/call',['name'=>'capabilities_read','arguments'=>(object)['map'=>'test','id'=>'cap-real-id']]);
   check($response['result']->structuredContent['file']==='different-name.md','Lookup by YAML ID, not filename');
+  $original = $response['result']->structuredContent['markdown'];
+  $updateArgs = (object)['map'=>'test','id'=>'cap-real-id','markdown'=>str_replace('Body', 'Updated body', $original),'expected_sha256'=>hash('sha256', $original)];
+  [$status,$response] = $call('tools/call',['name'=>'capabilities_update','arguments'=>$updateArgs]);
+  check($response['result']->isError===true && file_get_contents($root . '/different-name.md')===$original,'Anonymous write denied');
+  $cookieTools = new App\McpTools(['test'=>['path'=>$root]], [], true);
+  try { $cookieTools->call('capabilities_update', $updateArgs); throw new LogicException('Cookie allowed write'); } catch (RuntimeException $e) {}
+  $restrictedTools = new App\McpTools(['test'=>['path'=>$root]], [], true, true);
+  try { $restrictedTools->call('capabilities_update', $updateArgs); throw new LogicException('ACL allowed write'); } catch (RuntimeException $e) {}
+  $writeTools = new App\McpTools(['test'=>['path'=>$root]], [], true, true, ['test'=>['path'=>$root]]);
+  $updated = $writeTools->call('capabilities_update', $updateArgs);
+  check($updated['updated'] && file_get_contents($root . '/different-name.md')===$updateArgs->markdown,'API key with edit ACL updates document');
+  try { $writeTools->call('capabilities_update', $updateArgs); throw new LogicException('Stale update accepted'); } catch (RuntimeException $e) {}
+  check(file_get_contents($root . '/different-name.md')===$updateArgs->markdown,'Conflict preserves current document');
+  $invalidArgs = clone $updateArgs;
+  $invalidArgs->markdown = str_replace('cap-real-id', 'changed-id', $updateArgs->markdown);
+  try { $writeTools->call('capabilities_update', $invalidArgs); throw new LogicException('ID changed'); } catch (InvalidArgumentException $e) {}
   [$status,$response] = $call('tools/call',['name'=>'capabilities_list','arguments'=>(object)['tag'=>'STYRNING','limit'=>1]]);
   check($response['result']->structuredContent['total']===1,'Case-insensitive tag search');
   [$status,$response] = $call('tools/call',['name'=>'capabilities_read','arguments'=>(object)['map'=>'secret','id'=>'cap-real-id']]);
@@ -47,5 +63,5 @@ try {
   [$status,$response] = $server->handle(json_encode(['jsonrpc'=>'2.0','id'=>1,'method'=>'initialize','params'=>['protocolVersion'=>'2025-11-25','capabilities'=>(object)[],'clientInfo'=>(object)['name'=>'test','version'=>'1']]]),[]);
   check($response['result']->protocolVersion==='2025-11-25','Legacy initialization');
   check($server->handle('{"jsonrpc":"2.0","method":"notifications/initialized"}',['mcp-protocol-version'=>'2025-11-25'])===[202,null],'Empty notification response');
-} finally { unlink($root . '/different-name.md'); rmdir($root); }
+} finally { unlink($root . '/different-name.md'); if (is_file($root . '/different-name.md.mcp.lock')) unlink($root . '/different-name.md.mcp.lock'); rmdir($root); }
 echo "MCP tests passed\n";

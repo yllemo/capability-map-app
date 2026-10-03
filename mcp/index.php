@@ -19,6 +19,7 @@ if (strtolower(trim(explode(';',$_SERVER['CONTENT_TYPE'] ?? '')[0])) !== 'applic
 $accept = strtolower($_SERVER['HTTP_ACCEPT'] ?? '');
 if (!str_contains($accept,'application/json') || !str_contains($accept,'text/event-stream')) mcp_reply(App\McpServer::error(null,-32600,'Accept must include application/json and text/event-stream',406));
 $authorization = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+$hasApiKey = false;
 if ($authorization !== '') {
   $user = null;
   if (preg_match('/^Bearer (\S+)$/iD',$authorization,$match)) {
@@ -30,16 +31,13 @@ if ($authorization !== '') {
     mcp_reply(App\McpServer::error(null,-32600,'Invalid MCP credentials',401));
   }
   App\Auth::useRequestIdentity($user);
-}
-if (current_user() === null && !($config['allow_anonymous'] ?? false)) {
-  header('WWW-Authenticate: Bearer realm="capability-map-mcp"');
-  mcp_reply(App\McpServer::error(null,-32600,'Authentication required',401));
+  $hasApiKey = true;
 }
 if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
 $input = file_get_contents('php://input',false,null,0,1048577);
 if ($input === false || strlen($input)>1048576) mcp_reply(App\McpServer::error(null,-32600,'Request exceeds 1 MB',413));
 $headers = [];
 foreach (['mcp-protocol-version','mcp-method','mcp-name'] as $key) $headers[$key] = $_SERVER['HTTP_' . strtoupper(str_replace('-','_',$key))] ?? '';
-$tools = new App\McpTools(readable_content_dirs(),cfg('ai')['mcp'] ?? [],current_user() !== null);
+$tools = new App\McpTools(readable_content_dirs(),cfg('ai')['mcp'] ?? [],current_user() !== null, $hasApiKey, $hasApiKey ? editable_content_dirs() : []);
 $server = new App\McpServer($tools,(string)(cfg('ai')['mcp']['server_name'] ?? 'capability-map-mcp'));
 mcp_reply($server->handle($input,$headers));

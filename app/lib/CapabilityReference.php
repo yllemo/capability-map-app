@@ -52,6 +52,29 @@ final class CapabilityReference {
     return $text . "---\n";
   }
 
+  /** Find each readable map containing the original or a reference to it. */
+  public static function usageMaps(string $map, string $id, array $dirs): array {
+    if ($id === '') return [];
+    try {
+      $target = self::resolve(['redirect_map' => $map, 'redirect_id' => $id], $dirs);
+    } catch (\RuntimeException $e) {
+      return [];
+    }
+    $maps = [];
+    foreach ($dirs as $key => $dir) {
+      foreach ((new CapabilityRepository($dir['path'], $dirs))->all() as $cap) {
+        $originalMap = $cap->meta['redirect_map'] ?? (string)$key;
+        $originalId = $cap->meta['redirect_id'] ?? $cap->id;
+        if ($originalMap === $target['map'] && $originalId === $target['cap']->id) {
+          $maps[] = ['map' => (string)$key, 'label' => (string)($dir['label'] ?? $key)];
+          break;
+        }
+      }
+    }
+    usort($maps, fn($a, $b) => strnatcasecmp($a['label'], $b['label']));
+    return $maps;
+  }
+
   public static function choices(array $dirs): array {
     $choices = [];
     foreach ($dirs as $map => $dir) {

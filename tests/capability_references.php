@@ -32,6 +32,16 @@ try {
   referenceCheck($repo->all()[0]->name === 'Ändrat namn', 'Ändringar i originalet måste slå igenom.');
   $target = CapabilityReference::resolve($meta, $dirs);
   referenceCheck($target['map'] === 'b' && $target['cap']->id === 'cap-original', 'Målet ska inkludera rätt karta och ID.');
+  mkdir($root . '/c');
+  $dirs['c'] = ['path' => $root . '/c'];
+  file_put_contents($root . '/c/chain.md', "---\nid: chained\nredirect_map: a\nredirect_id: cap-ref-test\n---\n");
+  file_put_contents($root . '/a/second.md', CapabilityReference::markdown('second-ref', '["b","cap-original"]', $dirs));
+  file_put_contents($root . '/c/unrelated.md', str_replace('name: Original', 'name: Annan förmåga', $original));
+  $usage = CapabilityReference::usageMaps('b', 'cap-original', $dirs);
+  referenceCheck(array_column($usage, 'map') === ['a', 'b', 'c'], 'Alla kartor, inklusive kedjade referenser, ska visas en gång.');
+  referenceCheck(CapabilityReference::usageMaps('a', 'cap-ref-test', $dirs) === $usage, 'En länkad förmåga ska visa samma kartor som originalet.');
+  referenceCheck(array_column(CapabilityReference::usageMaps('b', 'cap-original', ['b' => $dirs['b']]), 'map') === ['b'], 'Endast tillgängliga kartor ska visas.');
+  referenceCheck(CapabilityReference::usageMaps('b', 'missing', $dirs) === [], 'Saknad förmåga ska ge en tom lista.');
   unlink($root . '/b/original.md');
   referenceCheck($repo->all()[0]->name === 'Bruten referens', 'Borttaget mål ska hanteras.');
   file_put_contents($root . '/b/original.md', "---\nid: cap-original\nredirect_map: a\nredirect_id: cap-ref-test\n---\n");
