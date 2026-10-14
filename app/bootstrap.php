@@ -45,6 +45,24 @@ function load_env_file(string $path): void {
 
 load_env_file(__DIR__ . '/../config/.env');
 
+function normalize_base_path(string $path): string {
+  $path = trim($path);
+  if ($path === '' || $path === '/') return '';
+  if (str_starts_with($path, '//')) throw new RuntimeException('base_path must be a local URL path.');
+  $path = '/' . trim($path, '/');
+  if (!preg_match('#^/(?:[A-Za-z0-9_.~-]+/)*[A-Za-z0-9_.~-]+$#D', $path)
+      || preg_match('~(?:^|/)\.{1,2}(?:/|$)~', $path)) {
+    throw new RuntimeException('base_path must be a path such as /cap, without a host, query or dot segments.');
+  }
+  return $path;
+}
+
+// Isolate the PHP session from other applications on the same host.
+$sessionBasePath = normalize_base_path((string)((require __DIR__ . '/../config/app.php')['base_path'] ?? ''));
+if (session_status() === PHP_SESSION_NONE) {
+  ini_set('session.cookie_path', $sessionBasePath . '/');
+}
+
 // Secure session configuration
 if (session_status() === PHP_SESSION_NONE) {
   // OpenShift compatibility: Less strict cookie settings for container environments
@@ -93,6 +111,7 @@ function cfg(string $name): array {
     }
   }
   if ($name === 'app') $result = array_replace($result, $admin['app'] ?? []);
+  if ($name === 'app') $result['base_path'] = normalize_base_path((string)($result['base_path'] ?? ''));
   if ($name === 'mcp') $result = array_replace($result, $admin['mcp'] ?? []);
   if ($name === 'mcp') $result = array_replace($result, $admin['mcp'] ?? []);
   return $result;
@@ -293,7 +312,7 @@ function require_auth(): void {
   if (is_authed()) return;
   $return = (string)($_SERVER['REQUEST_URI'] ?? '');
   $bp = rtrim(cfg('app')['base_path'] ?? '', '/');
-  if ($bp !== '' && str_starts_with($return, $bp)) $return = substr($return, strlen($bp));
+  if ($bp !== '' && ($return === $bp || str_starts_with($return, $bp . '/') || str_starts_with($return, $bp . '?'))) $return = substr($return, strlen($bp));
   $return = ltrim($return, '/');
   header('Location: ' . base_path('editor/login.php') . ($return !== '' ? '?return=' . rawurlencode($return) : ''));
   exit;

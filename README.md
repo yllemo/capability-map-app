@@ -641,6 +641,54 @@ för säkerhetskopiering, rättigheter och återställning.
 - **Fallback-hantering**: Smidig övergång mellan SVG-logo och textfallback
 
 ### OpenShift/Kubernetes Support
+
+#### Kör appen under `/cap` på en delad domän
+
+Ange prefixet direkt i `config/app.php`, oavsett plattform:
+
+```php
+'base_path' => '/cap',
+```
+
+CSS, JavaScript, navigation, omdirigeringar och absoluta
+MCP-länkar får då prefixet `/cap`. Sessions- och inloggningscookies avgränsas
+till `/cap/`. Använd `'base_path' => ''` för drift på `/`. Inga miljövariabler
+behövs. Samma inställning fungerar på Apache, Nginx, IIS och bakom en proxy.
+Webbservern behöver servera appen på den angivna sökvägen, eller proxyn skriva
+om den till appens interna sökväg. Prefixet genererar URL:er; det ändrar inte
+webbserverns routing.
+
+Om poddens webbserver serverar appen direkt från `/` ska routen matcha `/cap`
+och skriva om prefixet till `/` innan anropet når podden. Exempel (byt host,
+servicenamn och port till din miljö):
+
+```yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: capability-map
+  annotations:
+    haproxy.router.openshift.io/rewrite-target: /
+spec:
+  host: appar.example.se
+  path: /cap
+  to:
+    kind: Service
+    name: capability-map
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+```
+
+Webbläsaren hämtar `/cap/assets/overview.css`; podden tar emot
+`/assets/overview.css`. Routens omskrivning och appens externa prefix behövs
+båda i denna konfiguration. Om webbservern redan serverar appen under `/cap`
+ska routen behålla sökvägen utan omskrivning. Sökvägsbaserad routing kräver
+HTTP eller TLS-terminering, inte TLS passthrough.
+Se [Red Hats dokumentation om route-omskrivning](https://docs.redhat.com/en/documentation/openshift_container_platform/4.12/html/networking/configuring-routes).
+
 - **Automatisk miljödetektering**: Detekterar container-miljöer automatiskt
 - **Session-kompatibilitet**: Anpassade cookie-inställningar för containeriserade miljöer
 - **Temp-directory fallbacks**: Intelligent hantering av skrivbara temp-kataloger
