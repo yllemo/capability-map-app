@@ -57,10 +57,41 @@ function normalize_base_path(string $path): string {
   return $path;
 }
 
-// Isolate the PHP session from other applications on the same host.
+/** Directory of the requested entry script relative to the app, independent of proxy rewriting. */
+function app_script_directory(): string {
+  $root = str_replace('\\', '/', dirname(__DIR__)) . '/';
+  $filename = (string)($_SERVER['SCRIPT_FILENAME'] ?? '');
+  $script = str_replace('\\', '/', realpath($filename) ?: $filename);
+  if (!str_starts_with($script, $root)) return '';
+  $directory = dirname(substr($script, strlen($root)));
+  return $directory === '.' ? '' : $directory;
+}
+
+/** Detect the public prefix when the server/proxy exposes it; relative links do not need it. */
+function detected_base_path(): string {
+  $directory = app_script_directory();
+  $script = basename(str_replace('\\', '/', (string)($_SERVER['SCRIPT_FILENAME'] ?? 'index.php')));
+  $suffix = '/' . ($directory !== '' ? $directory . '/' : '') . $script;
+  foreach ([$_SERVER['HTTP_X_FORWARDED_PREFIX'] ?? null] as $prefix) {
+    if (is_string($prefix) && $prefix !== '') {
+      try { return normalize_base_path($prefix); } catch (RuntimeException $e) {}
+    }
+  }
+  foreach ([$_SERVER['REQUEST_URI'] ?? '', $_SERVER['SCRIPT_NAME'] ?? ''] as $url) {
+    $path = parse_url($url, PHP_URL_PATH);
+    if (!is_string($path) || !str_ends_with($path, $suffix)) continue;
+    try { return normalize_base_path(substr($path, 0, -strlen($suffix))); } catch (RuntimeException $e) {}
+  }
+  return '';
+}
+
+function app_cookie_path(): string {
+  return (cfg('app')['base_path'] ?: detected_base_path()) . '/';
+}
+
 $sessionBasePath = normalize_base_path((string)((require __DIR__ . '/../config/app.php')['base_path'] ?? ''));
 if (session_status() === PHP_SESSION_NONE) {
-  ini_set('session.cookie_path', $sessionBasePath . '/');
+  ini_set('session.cookie_path', ($sessionBasePath ?: detected_base_path()) . '/');
 }
 
 // Secure session configuration
@@ -120,7 +151,10 @@ function cfg(string $name): array {
 function base_path(string $path = ''): string {
   $bp = rtrim(cfg('app')['base_path'] ?? '', '/');
   $path = ltrim($path, '/');
-  return $bp . '/' . $path;
+  if ($bp !== '') return $bp . '/' . $path;
+  $directory = app_script_directory();
+  $relative = $directory === '' ? './' : str_repeat('../', count(explode('/', $directory)));
+  return $relative . $path;
 }
 
 function app_base_url(): string {
@@ -139,7 +173,7 @@ function app_base_url(): string {
   $host = trim(explode(',', $host)[0]);
   $host = rtrim($host, '/');
 
-  $bp = rtrim(cfg('app')['base_path'] ?? '', '/');
+  $bp = cfg('app')['base_path'] ?: detected_base_path();
   return $scheme . '://' . $host . $bp;
 }
 
@@ -311,7 +345,7 @@ function user_display_name(?string $username = null): string {
 function require_auth(): void {
   if (is_authed()) return;
   $return = (string)($_SERVER['REQUEST_URI'] ?? '');
-  $bp = rtrim(cfg('app')['base_path'] ?? '', '/');
+  $bp = cfg('app')['base_path'] ?: detected_base_path();
   if ($bp !== '' && ($return === $bp || str_starts_with($return, $bp . '/') || str_starts_with($return, $bp . '?'))) $return = substr($return, strlen($bp));
   $return = ltrim($return, '/');
   header('Location: ' . base_path('editor/login.php') . ($return !== '' ? '?return=' . rawurlencode($return) : ''));

@@ -644,19 +644,26 @@ för säkerhetskopiering, rättigheter och återställning.
 
 #### Kör appen under `/cap` på en delad domän
 
-Ange prefixet direkt i `config/app.php`, oavsett plattform:
+Låt `base_path` vara tom eller utelämna inställningen i `config/app.php`:
 
 ```php
-'base_path' => '/cap',
+'base_path' => '',
 ```
 
-CSS, JavaScript, navigation, omdirigeringar och absoluta
-MCP-länkar får då prefixet `/cap`. Sessions- och inloggningscookies avgränsas
-till `/cap/`. Använd `'base_path' => ''` för drift på `/`. Inga miljövariabler
-behövs. Samma inställning fungerar på Apache, Nginx, IIS och bakom en proxy.
+CSS, JavaScript, navigation och omdirigeringar använder då relativa länkar,
+exempelvis `../assets/overview.css`, som behåller webbläsarens aktuella prefix.
+Samma kod fungerar på `/`, `/cap/` och andra underkataloger utan konfiguration.
+Startsidan använder en webbläsaromdirigering för att även behålla prefixet när
+adressen saknar avslutande snedstreck. JavaScript behövs för den automatiska
+omdirigeringen. Inga miljövariabler behövs.
+Samma inställning fungerar på Apache, Nginx, IIS och bakom en proxy.
 Webbservern behöver servera appen på den angivna sökvägen, eller proxyn skriva
 om den till appens interna sökväg. Prefixet genererar URL:er; det ändrar inte
-webbserverns routing.
+webbserverns routing. Ett explicit `'base_path' => '/cap'` finns kvar som undantag.
+Absoluta export- och MCP-adresser samt cookie-sökvägar härleds från anropets
+sökväg eller `X-Forwarded-Prefix`. Om proxyn tar bort prefixet helt och inte
+vidarebefordrar det kan PHP inte härleda externa absoluta adresser; relativa
+länkar fungerar ändå. Cookies använder då `/` som sökväg.
 
 Om poddens webbserver serverar appen direkt från `/` ska routen matcha `/cap`
 och skriva om prefixet till `/` innan anropet når podden. Exempel (byt host,
@@ -683,8 +690,8 @@ spec:
 ```
 
 Webbläsaren hämtar `/cap/assets/overview.css`; podden tar emot
-`/assets/overview.css`. Routens omskrivning och appens externa prefix behövs
-båda i denna konfiguration. Om webbservern redan serverar appen under `/cap`
+`/assets/overview.css`. Relativa länkar bevarar det externa prefixet automatiskt.
+Om webbservern redan serverar appen under `/cap`
 ska routen behålla sökvägen utan omskrivning. Sökvägsbaserad routing kräver
 HTTP eller TLS-terminering, inte TLS passthrough.
 Se [Red Hats dokumentation om route-omskrivning](https://docs.redhat.com/en/documentation/openshift_container_platform/4.12/html/networking/configuring-routes).

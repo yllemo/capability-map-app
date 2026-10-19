@@ -19,13 +19,34 @@ foreach (['https://example.test/cap', '/cap?x=1', '/cap/../other', '//other.test
   } catch (RuntimeException $e) {}
 }
 
-pathCheck(base_path('assets/overview.css') === $prefix . '/assets/overview.css', 'CSS prefix');
-pathCheck(base_path('/assets/editor.js') === $prefix . '/assets/editor.js', 'JavaScript prefix');
-pathCheck(base_path('/') === $prefix . '/', 'Root and cookie prefix');
-pathCheck(base_path('editor/index.php?map=content') === $prefix . '/editor/index.php?map=content', 'Query preservation');
+$linkRoot = $prefix !== '' ? $prefix . '/' : '../';
+pathCheck(base_path('assets/overview.css') === $linkRoot . 'assets/overview.css', 'CSS prefix');
+pathCheck(base_path('/assets/editor.js') === $linkRoot . 'assets/editor.js', 'JavaScript prefix');
+pathCheck(base_path('/') === $linkRoot, 'Relative root');
+pathCheck(base_path('editor/index.php?map=content') === $linkRoot . 'editor/index.php?map=content', 'Query preservation');
 pathCheck(ini_get('session.cookie_path') === $prefix . '/', 'Session cookie isolation');
 $_SERVER['HTTP_X_FORWARDED_PROTO'] = 'https';
 $_SERVER['HTTP_X_FORWARDED_HOST'] = 'apps.example.test';
 pathCheck(absolute_url('mcp/index.php') === 'https://apps.example.test' . $prefix . '/mcp/index.php', 'Public URL behind proxy');
+if ($prefix === '') {
+  $_SERVER['SCRIPT_FILENAME'] = dirname(__DIR__) . '/view/overview.php';
+  foreach (['/view/overview.php', '/cap/view/overview.php', '/team/maps/view/overview.php'] as $url) {
+    $_SERVER['REQUEST_URI'] = $url;
+    $_SERVER['SCRIPT_NAME'] = $url;
+    pathCheck(base_path('assets/overview.css') === '../assets/overview.css', 'Relative links ignore mount point');
+    pathCheck(base_path('editor/index.php?map=content') === '../editor/index.php?map=content', 'Relative navigation');
+    $publicPrefix = substr($url, 0, -strlen('/view/overview.php'));
+    pathCheck(app_cookie_path() === $publicPrefix . '/', 'Detected cookie path');
+    pathCheck(absolute_url('mcp/index.php') === 'https://apps.example.test' . $publicPrefix . '/mcp/index.php', 'Detected absolute URL');
+  }
+  $_SERVER['REQUEST_URI'] = $_SERVER['SCRIPT_NAME'] = '/view/overview.php';
+  $_SERVER['HTTP_X_FORWARDED_PREFIX'] = '/cap';
+  pathCheck(app_cookie_path() === '/cap/', 'Proxy-provided prefix');
+  unset($_SERVER['HTTP_X_FORWARDED_PREFIX']);
+  $_SERVER['SCRIPT_FILENAME'] = dirname(__DIR__) . '/index.php';
+  pathCheck(base_path('view/index.php') === './view/index.php', 'Root entry script');
+  $_SERVER['SCRIPT_FILENAME'] = dirname(__DIR__) . '/nested/tools/index.php';
+  pathCheck(base_path('assets/app.js') === '../../assets/app.js', 'Nested entry script');
+}
 session_write_close();
 echo "Base path tests passed\n";

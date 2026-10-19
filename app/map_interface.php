@@ -20,7 +20,7 @@ $_SESSION['capmap_interface'] = $chosenInterface;
 if (($_COOKIE['capmap_interface'] ?? null) !== $chosenInterface) {
   setcookie('capmap_interface', $chosenInterface, [
     'expires' => time() + 365 * 24 * 60 * 60,
-    'path' => base_path('/'),
+    'path' => app_cookie_path(),
     'httponly' => true,
     'samesite' => 'Lax',
     'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',

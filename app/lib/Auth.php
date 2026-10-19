@@ -103,7 +103,7 @@ final class Auth {
     $value = $username . '|' . $expires . '|' . self::sign($username, $expires);
     setcookie(self::cookieName(), $value, [
       'expires' => $expires,
-      'path' => \base_path('/'),
+      'path' => \app_cookie_path(),
       'httponly' => true,
       'samesite' => 'Lax',
       'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
@@ -112,7 +112,7 @@ final class Auth {
   }
 
   public static function clearCookie(): void {
-    setcookie(self::cookieName(), '', time() - 3600, \base_path('/'));
+    setcookie(self::cookieName(), '', time() - 3600, \app_cookie_path());
     self::$resolved = ['user' => null];
   }
 

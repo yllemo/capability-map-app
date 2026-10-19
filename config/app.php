@@ -1,7 +1,7 @@
 <?php
 return [
   'site_name' => 'Capability Maps',
-  'base_path' => '', // Optional public URL prefix, e.g. '/cap'. Empty or omitted means /.
+  'base_path' => '', // Empty or omitted: automatic relative links. Optional explicit prefix, e.g. '/cap'.
   'content_dir' => __DIR__ . '/../content', // deprecated, use content_dirs
   // Legacy paths below remain active until editor/migrate_content.php is run.
   // The migration writes content/.capmap-config.json with a common content_root
