@@ -6,7 +6,7 @@ header('Content-Type: text/html; charset=UTF-8');
 header('Cache-Control: no-store');
 $error = '';
 $generatedKey = '';
-$tabs = ['site'=>'Webbplats', 'maps'=>'Kartor', 'users'=>'Användare', 'mcp'=>'MCP'];
+$tabs = ['site'=>'Webbplats', 'maps'=>'Kartor', 'users'=>'Användare', 'mcp'=>'MCP', 'backup'=>'Export/import'];
 $requestedTab = $_GET['tab'] ?? 'site';
 $tab = is_string($requestedTab) && isset($tabs[$requestedTab]) ? $requestedTab : 'site';
 $field = static function(string $key): string {
@@ -109,6 +109,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div id="admin-panel">
 <?php if ($error !== ''): ?><p class="admin-notice is-error" role="alert"><?= h($error) ?></p><?php endif; ?>
 <?php if (isset($_GET['saved']) && $error === ''): ?><p class="admin-notice" role="status">Inställningarna har sparats.</p><?php endif; ?>
+<?php if (isset($_SESSION['backup_error'])): ?><p class="admin-notice is-error" role="alert"><?= h($_SESSION['backup_error']) ?></p><?php unset($_SESSION['backup_error']); endif; ?>
+<?php if (isset($_SESSION['backup_notice'])): ?><p class="admin-notice" role="status"><?= h($_SESSION['backup_notice']) ?></p><?php unset($_SESSION['backup_notice']); endif; ?>
 <?php if ($tab === 'site'): ?>
 <section class="card"><div class="card__bd">
 <h2>Webbplats</h2>
@@ -133,6 +135,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <button class="btn btn--primary">Spara inställningar</button>
 <p>Överordnad karta påverkar endast kartväljarnas visning. Underliggande kartor visas indragna efter sin överordnade karta. Högst två nivåer; inga filer flyttas.</p>
 </form></div></section>
+<?php elseif ($tab === 'backup'): ?>
+<section class="card"><div class="card__bd">
+<h2>Exportera systembackup</h2>
+<p>Hämta alla konfigurerade förmågekartor, övriga filer i innehållsroten och sparade admininställningar som en ZIP-fil. Kartnycklar och länkar mellan förmågor bevaras.</p>
+<p>Innehållsrot: <code><?= h(cfg('app')['content_root'] ?? cfg('app')['content_dir'] ?? dirname(__DIR__) . '/content') ?></code></p>
+<p>Backupen innehåller även sparade användares lösenordshashar och MCP-nyckelhashar. Förvara filen skyddat. Applikationskod, config/.env och inställningar som enbart ligger i config/ ingår inte. Låsfiler och tillfälliga arbetskataloger undantas.</p>
+<?php if (!class_exists(ZipArchive::class)): ?><p class="admin-notice is-error" role="alert">PHP-tillägget ZipArchive (zip) behöver aktiveras på servern för export och import.</p><?php endif; ?>
+<form method="post" action="<?= h(base_path('admin/backup.php')) ?>"><?= csrf_field() ?><input type="hidden" name="action" value="export"><button class="btn btn--primary" <?= class_exists(ZipArchive::class) ? '' : 'disabled' ?>>Ladda ner ZIP-backup</button></form>
+</div></section>
+<section class="card"><div class="card__bd">
+<h2>Importera systembackup</h2>
+<p>Välj en ZIP-backup skapad av denna exportfunktion. Välj uttryckligen hur befintliga filer ska hanteras. Innehållet kontrolleras innan aktivering och en varningsdialog visas före importen.</p>
+<p>Ta en aktuell export innan import och utför importen när inga andra användare redigerar. Körbara filer och webbserverkonfiguration stöds inte.</p>
+<form id="backup-import-form" method="post" enctype="multipart/form-data" action="<?= h(base_path('admin/backup.php')) ?>" class="grid" style="gap:12px">
+<?= csrf_field() ?><input type="hidden" name="action" value="import">
+<input type="hidden" name="warning_confirmed" value="">
+<label>ZIP-backup <input class="input" type="file" name="backup" accept=".zip,application/zip" required></label>
+<p>Max 100 MiB ZIP, 250 MiB uppackat, 25 MiB per fil och 20 000 filer. Serverns gränser: upload_max_filesize <?= h(ini_get('upload_max_filesize')) ?>, post_max_size <?= h(ini_get('post_max_size')) ?>.</p>
+<fieldset><legend>Befintliga filer</legend>
+<label><input type="radio" name="existing_files" value="keep" checked required> Behåll befintliga filer (standard)</label>
+<p>Befintliga kartor och filer behålls. Endast nya filer och kartor läggs till. Vid samma filnamn eller förmåge-ID används den befintliga förmågan.</p>
+<label><input type="radio" name="existing_files" value="overwrite" required> Skriv över med backupens innehåll</label>
+<p>Backupens kartor blir aktiva och ersätter kartvalet. Rotfiler med samma namn skrivs över. Nuvarande kartkataloger finns kvar på disk men används inte längre.</p>
+</fieldset>
+<label><input type="checkbox" name="restore_settings" value="1"> Återställ även admininställningar, konton och MCP-nycklar från backupen</label>
+<p>Avstängt som standard. Om du väljer detta ersätts sparade inställningar och du kan behöva logga in igen med ett konto från backupen.</p>
+<label>Skriv IMPORTERA för att bekräfta <input class="input" name="confirmation" required pattern="IMPORTERA" autocomplete="off"></label>
+<button class="btn btn--primary" <?= class_exists(ZipArchive::class) ? '' : 'disabled' ?>>Importera och aktivera backup</button>
+</form><noscript><p class="admin-notice is-error">JavaScript måste vara aktiverat för att kunna bekräfta importens varningsdialog.</p></noscript>
+<script defer src="<?= h(base_path('assets/admin-backup.js')) ?>"></script>
+</div></section>
 <?php elseif ($tab === 'mcp'): ?>
 <section class="card"><div class="card__bd">
 <h2>MCP och API-nyckel</h2>

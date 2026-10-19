@@ -239,6 +239,76 @@ spärrad för referensfiler för att behålla deras minimala format.
   innan du klickar på **Skapa**. Beskrivning, mognad, länk och Markdown följer med;
   övriga förmågor i JSON-filen importeras inte.
 
+### Systembackup: Admin → Export/import
+
+För att återställa en backup:
+
+1. Öppna **Admin → Export/import** och exportera först den nuvarande installationen.
+2. Välj ZIP-filen och antingen **Behåll befintliga filer** (standard) eller **Skriv över med backupens innehåll**.
+3. Markera återställning av konton och admininställningar endast om även dessa ska ersättas.
+4. Skriv **IMPORTERA**, klicka på importknappen och kontrollera sammanfattningen i varningsdialogen. Välj **Avbryt** om något val är fel.
+5. Bekräfta dialogen och kontrollera sedan importresultatet och kartorna.
+
+Öppna `/admin/index.php?tab=backup` som administratör och välj **Ladda ner
+ZIP-backup**. Exporten omfattar alla konfigurerade kartkataloger, filer i den
+gemensamma innehållsroten och sparade admininställningar. Innehållsroten hämtas
+från `content_root`, med `content_dir` som fallback. Även äldre installationer
+med flera separata kartkataloger stöds. Filerna i kartorna bevaras byte för byte,
+inklusive Markdown, bilagor och referenskort med stabila kartnycklar.
+
+Arkivet innehåller ett versionsmärkt `manifest.json`, `maps/<kartnyckel>/...`
+och `root/...`. Sparade webbplatsinställningar, kartordning och gruppering,
+konton med lösenordshashar samt MCP-nyckelhashar lagras som JSON i manifestet.
+Behandla ZIP-filen som en känslig systembackup. Applikationskod och inställningar
+som enbart finns under `config/`, exempelvis `.env`, ACL och baskonton, ingår
+inte. Hanterade PHP-inställningsfiler återbildas från validerad JSON; uppladdad
+PHP körs aldrig. Körbara filer, webbserverkonfiguration, symboliska länkar,
+låsfiler och tillfälliga arbetskataloger ingår inte.
+
+Importera en ZIP skapad av denna funktion, välj hantering av befintliga filer,
+skriv **IMPORTERA** och välj **Importera och aktivera backup**. En tydlig
+varningsdialog sammanfattar ZIP-fil, filhantering och om konton/inställningar
+ersätts. **Avbryt** skickar ingen import. JavaScript krävs och servern kräver
+bekräftelsen samt ett giltigt filhanteringsval. Ta en aktuell export först och använd ett
+underhållsfönster utan samtidiga redigeringar. Importen använder den aktuella
+installationens innehållsrot; serverns ursprungliga sökvägar följer inte med
+från ZIP-filen. Den kontrollerar sökvägar, filstorlekar, filtyper och SHA-256
+innan aktivering. Kartorna placeras i nya `capmap-restored-...`-kataloger och
+systemet växlar därefter till dessa. De tidigare kartkatalogerna lämnas kvar på
+disk och kan rensas manuellt efter verifiering; inaktiva återställningskopior
+tas inte med automatiskt i framtida exporter.
+
+**Behåll befintliga filer** är standard: befintliga kartor och filer kopieras
+till det nya aktiva kartbeståndet och endast nya filer/kartor från backupen
+läggs till. Vid samma filnamn eller förmåge-ID används befintligt innehåll.
+Rotfiler med samma namn behålls. Resultatet anger antalet bevarade filkonflikter.
+
+**Skriv över med backupens innehåll** aktiverar backupens kartbestånd och
+ersätter rotfiler med samma namn. Övriga befintliga kartor är inte längre aktiva,
+men deras gamla kataloger finns kvar på disk.
+
+**Återställ även admininställningar, konton och MCP-nycklar** är en separat,
+från början avstängd kryssruta. Sparade inställningar ersätts bara om den väljs.
+Rotfiler som inte finns i ZIP-filen lämnas kvar. Vid vanliga
+skrivfel återställs ändrade filer och den tidigare konfigurationen. Om kryssrutan
+har valts blir backupens sparade konton och MCP-inställningar aktiva;
+en ny inloggning kan krävas.
+PHP behöver skrivrättighet till innehållsroten och appens `content/`, där de
+hanterade konfigurationsfilerna lagras. Ingen katalog som kan vara en monterad
+volym flyttas eller raderas.
+
+Gränser: 100 MiB ZIP, 250 MiB uppackat, 25 MiB per fil, 20 000 filer och
+1 000 kartor. Serverns `upload_max_filesize` och `post_max_size` kan ge lägre
+uppladdningsgränser och visas i formuläret. PHP-tillägget **zip / ZipArchive**
+krävs. Ett äldre ZIP från editorns enkla export av en enskild karta är inte en
+systembackup och accepteras inte av denna import.
+
+Tester: `php tests/content_backup.php` och `node tests/admin_backup_dialog.mjs`.
+HTTP-testet använder en isolerad appkopia
+och testdata: `node tests/content_backup_http.mjs` (sätt `PHP_BINARY` till PHP CLI
+vid behov; valfri `PHP_EXTENSION_DIR` aktiverar mbstring och zip i en portabel
+Windows-runtime).
+
 ### MCP (`/mcp/index.php`)
 
 MCP-servern erbjuder läs- och uppdateringsverktyg via JSON-RPC 2.0 och Streamable HTTP med

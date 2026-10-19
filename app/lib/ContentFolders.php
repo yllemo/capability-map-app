@@ -4,7 +4,10 @@ namespace App;
 
 final class ContentFolders {
   public static function manage(string $project, string $key, string $action, array $input): void {
-    $root = realpath($project . '/content');
+    $initialConfigPath = ContentMigration::configPath($project);
+    if (!is_file($initialConfigPath)) throw new \RuntimeException('Migrera eller importera först kartorna till en gemensam innehållsrot.');
+    $initialConfig = json_decode((string)file_get_contents($initialConfigPath), true, 32, JSON_THROW_ON_ERROR);
+    $root = realpath(ContentMigration::resolveRoot($project, (string)($initialConfig['content_root'] ?? 'content')));
     if ($root === false) throw new \RuntimeException('Innehållsroten saknas.');
     $lock = @fopen($root . '/.capmap-migration.lock', 'c');
     if (!$lock) throw new \RuntimeException('Kunde inte låsa innehållskonfigurationen.');
@@ -13,7 +16,7 @@ final class ContentFolders {
       $configPath = ContentMigration::configPath($project);
       if (!is_file($configPath)) throw new \RuntimeException('Migrera först kartorna till /content.');
       $config = json_decode((string)file_get_contents($configPath), true, 32, JSON_THROW_ON_ERROR);
-      if (($config['content_root'] ?? '') !== 'content' || !isset($config['content_dirs'][$key])) throw new \RuntimeException('Kartan saknas i innehållskonfigurationen.');
+      if (realpath(ContentMigration::resolveRoot($project, (string)($config['content_root'] ?? ''))) !== $root || !isset($config['content_dirs'][$key])) throw new \RuntimeException('Kartkonfigurationen har ändrats. Ladda om sidan.');
       $entry = $config['content_dirs'][$key];
       $folder = $entry['folder'] ?? '';
       if (!is_string($folder) || !preg_match('/^[a-zA-Z0-9_-]+$/D', $folder)) throw new \RuntimeException('Ogiltig katalog i konfigurationen.');
@@ -72,7 +75,7 @@ final class ContentFolders {
     if (!preg_match('/^[a-z0-9_-]+$/D', $key) || trim($label) === '') {
       throw new \InvalidArgumentException('Ange en folder-nyckel med små bokstäver, siffror, - eller _ och ett visningsnamn.');
     }
-    $root = realpath($project . '/content');
+    $root = realpath($app['content_root'] ?? $project . '/content');
     if ($root === false || !is_writable($root)) throw new \RuntimeException('/content måste finnas och vara skrivbar för PHP.');
     $lock = @fopen($root . '/.capmap-migration.lock', 'c');
     if (!$lock) throw new \RuntimeException('Kunde inte öppna kataloglåset under /content. Kontrollera skrivrättigheterna.');
@@ -89,7 +92,7 @@ final class ContentFolders {
       } else {
         // Already migrated manually? Convert existing paths without moving files.
         $dirs = $app['content_dirs'] ?? ['content' => ['path' => $app['content_dir'] ?? $project . '/content', 'label' => 'Content']];
-        $config = ['content_root' => 'content', 'content_dirs' => []];
+        $config = ['content_root' => realpath($project . '/content') === $root ? 'content' : $root, 'content_dirs' => []];
         foreach ($dirs as $existingKey => $dir) {
           $path = realpath($dir['path'] ?? '');
           if ($path === false || !is_dir($path) || dirname($path) !== $root) {
@@ -100,7 +103,7 @@ final class ContentFolders {
           $config['content_dirs'][$existingKey] = $dir;
         }
       }
-      if (!is_array($config) || ($config['content_root'] ?? '') !== 'content' || !isset($config['content_dirs']) || !is_array($config['content_dirs'])) {
+      if (!is_array($config) || realpath(ContentMigration::resolveRoot($project, (string)($config['content_root'] ?? ''))) !== $root || !isset($config['content_dirs']) || !is_array($config['content_dirs'])) {
         throw new \RuntimeException('Innehållskonfigurationen måste ange content_root: content och en lista med kartkataloger.');
       }
       foreach ($config['content_dirs'] as $existingKey => $dir) {

@@ -13,6 +13,9 @@ final class ContentMigration {
     $path = $project . '/content/.capmap-config.json';
     return is_file($path) ? $path : $project . '/config/content.local.json';
   }
+  public static function resolveRoot(string $project, string $root): string {
+    return preg_match('~^(?:/|[A-Za-z]:[\\\\/])~', $root) ? $root : $project . '/' . $root;
+  }
   public function plan(array $dirs): array {
     $root = $this->project . '/content';
     if (!is_dir($root) || !is_writable($root)) throw new \RuntimeException('/content måste finnas och vara skrivbar för PHP. Ingen skrivrättighet till appens rot krävs.');

@@ -124,7 +124,8 @@ function cfg(string $name): array {
       : __DIR__ . '/../config/content.local.json';
     if ($name === 'app' && is_file($contentConfigPath)) {
       $contentConfig = json_decode((string)file_get_contents($contentConfigPath), true, 32, JSON_THROW_ON_ERROR);
-      $root = __DIR__ . '/../' . $contentConfig['content_root'];
+      $configuredRoot = $contentConfig['content_root'];
+      $root = App\ContentMigration::resolveRoot(dirname(__DIR__), $configuredRoot);
       $cache[$name]['content_root'] = $root;
       $cache[$name]['content_dirs'] = $contentConfig['content_dirs'];
       foreach ($cache[$name]['content_dirs'] as &$dir) {
